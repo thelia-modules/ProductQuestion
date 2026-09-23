@@ -13,44 +13,43 @@ declare(strict_types=1);
 
 namespace ProductQuestion\Hook;
 
-use ProductQuestion\ProductQuestion;
-use Thelia\Core\Event\Hook\HookRenderBlockEvent;
+use Thelia\Core\Event\Hook\HookRenderEvent;
 use Thelia\Core\Hook\BaseHook;
-use Thelia\Tools\URL;
 
 /**
  * The module's entry in the back-office side navigation.
  *
- * The default-twig side nav has no free slot: a module reaches a section through the
- * hook_block() that section calls. Questions are filed under Customers, which is what the
- * entry is named after and where an administrator looks for what a customer sent.
+ * A top-level entry, not a line inside a section: the default-twig side nav folds every
+ * section's sub-entries behind a click, so an entry filed under Customers is invisible
+ * until that section is opened. `main.in-top-menu-items` is the one point where a module
+ * adds an item of its own to the list, after the built-in sections. Page, TheliaBlocks and
+ * Option already sit there, at positions 1 to 3; declaring 4 puts this one right after
+ * Option. The declared position is read once, when RegisterHookListenersPass creates the
+ * module_hook row — after that the order belongs to the back office.
  *
- * Nothing declares this hook anywhere else. RegisterHookListenersPass reads
- * getSubscribedHooks() when the container is compiled, creates the module_hook row if it is
- * missing, and registers the listener — so a new hook only appears once the container has
- * been rebuilt with the module active.
+ * Nothing declares this hook anywhere else. The pass reads getSubscribedHooks() while the
+ * container is compiled, creates the row if it is missing, deletes a row whose method no
+ * longer exists on this class, and registers the listener — so a change here only shows
+ * once the container has been rebuilt with the module active.
  */
 class BackHook extends BaseHook
 {
     /**
-     * @return array<string, list<array{type: string, method: string}>>
+     * @return array<string, list<array{type: string, method: string, position?: int}>>
      */
     public static function getSubscribedHooks(): array
     {
         return [
-            'main.top-menu-customer' => [
-                ['type' => 'back', 'method' => 'onMainTopMenuCustomer'],
+            'main.in-top-menu-items' => [
+                ['type' => 'back', 'method' => 'onMainInTopMenuItems', 'position' => 4],
             ],
         ];
     }
 
-    public function onMainTopMenuCustomer(HookRenderBlockEvent $event): void
+    public function onMainInTopMenuItems(HookRenderEvent $event): void
     {
-        $event->add([
-            'id' => 'customer_menu_product_question',
-            'class' => '',
-            'url' => URL::getInstance()->absoluteUrl(ProductQuestion::ADMIN_LIST_PATH),
-            'title' => $this->trans('Customer questions', [], ProductQuestion::MESSAGE_DOMAIN),
-        ]);
+        // The theme passes the current route as admin_current_location, which is what lets
+        // the entry light up on the module's own screens.
+        $event->add($this->render('ProductQuestion/hook/menu-item.html.twig', $event->getTemplateVars()));
     }
 }

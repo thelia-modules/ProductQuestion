@@ -48,10 +48,11 @@ language being browsed. A product with none renders nothing at all.
 
 ## Back office
 
-The module adds a **Customer questions** entry under Customers in the side navigation. It is
-contributed through the `main.top-menu-customer` hook block, whose `module_hook` row is
-created when the container is compiled, so the entry appears once the cache has been rebuilt
-with the module active.
+The module adds a **Customer questions** entry at the first level of the side navigation,
+after the entries of the Page, TheliaBlocks and Option modules. It is contributed through the
+`main.in-top-menu-items` hook at position 4, whose `module_hook` row is created when the
+container is compiled, so the entry appears once the cache has been rebuilt with the module
+active.
 
 The entry opens the moderation list, at `/admin/module/product-questions`. It has one tab per
 status with a count, filters on language, product, customer and sort order, and pagination.

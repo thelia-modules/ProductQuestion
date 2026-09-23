@@ -21,7 +21,7 @@ product page, in the language it was asked in.
 | `ON DELETE SET NULL` from `customer` and from `admin` | A published answer belongs to the shop. Closing either account must not take it off the product page. |
 | Only a signed-in customer may ask | The back office links to the customer record, and an account is what makes that link exist. `customer_id` is nullable in the database for the SET NULL rule alone. |
 | No mention of the answer's author on the product page | Decided with the developer: the answer is the shop's, unsigned. |
-| Menu entry under Customers | `hook_block('main.top-menu-customer')`, which the `default-twig` side nav renders. |
+| Top-level menu entry, right after Option | `main.in-top-menu-items`, position 4. The side nav folds every section's sub-entries behind a click, so an entry filed under Customers was invisible until that section was opened: the developer asked for it at the first level, after the content blocks and the Options entry. |
 | Front office shows the visitor's locale only | A question asked in French is answered in French. |
 | No admin API in v1 | Everything goes through the back office. |
 
@@ -73,6 +73,11 @@ stable, and the developer reviewing before the next one starts.
   of them, none naming this module. `cache:clear --env=test --no-debug` before running the
   suites is what separates a real regression from that. Proven by an A/B: the same four
   pre-existing failures with the module on and with it off.
+- A hook may declare `'position' => N` next to its method. RegisterHookListenersPass reads it once,
+  when it creates the `module_hook` row, and orders listeners by ascending position; after that
+  the order belongs to the back office. The pass also deletes a row whose method no longer
+  exists on the class, which is how the first `main.top-menu-customer` entry went away on its
+  own when the method was renamed.
 - The back-office hook and the front-office hook are two different mechanisms. The front one
   implements `ThemeHookInterface`, is collected through the autoconfigured `thelia.theme_hook`
   tag and needs no row anywhere. The back-office one extends `BaseHook`, and
@@ -107,9 +112,10 @@ stable, and the developer reviewing before the next one starts.
 - The product page of a French visitor carries the answered French question and neither the
   pending one nor the answered English one. The English page carries the English question
   under an English heading. Checked over HTTP against the `work` theme.
-- The back-office side nav renders
-  `<a href="…/admin/module/product-questions" id="customer_menu_product_question">Customer
-  questions</a>` under Customers, in an authenticated request.
+- The back-office side nav renders the entry at the first level, right after Pages, Blocs de
+  contenus and Options, in an authenticated request against the dev database; the entry reads
+  « Questions client » when the interface is French and is marked active on the module's own
+  screens. The Customers section is a plain link again.
 - The moderation screens, in authenticated requests against a real database: the list shows a
   question with its author and status, the status filter keeps only what it asks for, the
   answer form publishes and writes the four columns, a post with no CSRF token changes
