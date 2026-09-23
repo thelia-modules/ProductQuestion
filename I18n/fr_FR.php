@@ -12,4 +12,6 @@ declare(strict_types=1);
  */
 
 return [
+    'Customer questions' => 'Questions client',
+    'Answer from the shop' => 'Réponse de la boutique',
 ];

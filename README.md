@@ -40,6 +40,19 @@ exists, to one customer.
 The three statuses are a PHP enum, `ProductQuestion\Model\ProductQuestionStatus`, not a table:
 they are a workflow the module implements, not a list a shop administrator can add to.
 
+## Front office
+
+The module answers the `product.bottom` theme hook, so a theme calling that hook shows the
+block with no further work. Only answered questions appear, and only those asked in the
+language being browsed. A product with none renders nothing at all.
+
+## Back office
+
+The module adds a **Customer questions** entry under Customers in the side navigation. It is
+contributed through the `main.top-menu-customer` hook block, whose `module_hook` row is
+created when the container is compiled, so the entry appears once the cache has been rebuilt
+with the module active.
+
 ## Tests
 
 The module's own suite needs neither a database nor a booted kernel:

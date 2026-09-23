@@ -1,0 +1,24 @@
+{# The answered questions of this product, in the language being browsed. The hook renders
+   nothing at all when there are none, so this template never has an empty case to handle. #}
+<section id="ProductQuestion" class="ProductQuestion container-l">
+    <header class="ProductQuestion-header">
+        <h2 class="h2 text-black">{{ labels.title }}</h2>
+    </header>
+
+    <ul class="ProductQuestion-list">
+        {% for question in questions %}
+            <li class="ProductQuestion-item">
+                <p class="ProductQuestion-question paragraph-2 text-black">{{ question.content|nl2br }}</p>
+                <div class="ProductQuestion-answer">
+                    <p class="ProductQuestion-answerLabel paragraph-4 text-grey">
+                        {{ labels.answer }}
+                        {% if question.answeredAt %}
+                            <time datetime="{{ question.answeredAt|date('Y-m-d') }}">{{ question.answeredAt|date('d/m/Y') }}</time>
+                        {% endif %}
+                    </p>
+                    <p class="paragraph-3 text-black">{{ question.answer|nl2br }}</p>
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+</section>

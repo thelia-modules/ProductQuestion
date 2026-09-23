@@ -11,9 +11,11 @@ declare(strict_types=1);
  * file that was distributed with this source code.
  */
 
-return [
-    'Pending' => 'En attente',
-    'Answered' => 'Répondue',
-    'Refused' => 'Refusée',
-    'Unknown' => 'Inconnu',
-];
+namespace ProductQuestion\Event;
+
+/**
+ * A customer has just asked a question. The administrator notification listens to this one.
+ */
+final class ProductQuestionCreatedEvent extends ProductQuestionEvent
+{
+}

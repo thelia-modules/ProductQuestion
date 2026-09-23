@@ -32,12 +32,14 @@ stable, and the developer reviewing before the next one starts.
 
 - [x] **1. Foundation** — repository skeleton, `schema.xml` and the generated SQL, model stubs,
   status enum, activation, quality gate, test harness.
-- [ ] **2. Domain** — repository, the services that create, answer and refuse, the events,
-  the status catalogue. Unit tests on an in-memory double.
+- [x] **2. Domain and hooks** — repository behind a storage contract, the services that ask,
+  answer and refuse, the three events, the status catalogue, the text sanitiser, both hooks
+  wired and proven in a running shop.
 - [ ] **3. Back office** — list and detail controllers, filters and pagination, the answer
-  form, the menu entry, ACL, French and English strings.
-- [ ] **4. Front office** — the `product.bottom` theme hook, the Twig component, the API
-  resource for reading and posting, the module stylesheet.
+  form, ACL, French and English strings. Until this lands, the side-nav entry points at a
+  path no controller answers.
+- [ ] **4. Front office** — the ask form, the Twig component replacing the plain template,
+  the API resource for reading and posting, the rate limiter, the module stylesheet.
 - [ ] **5. Administrator notification** — the message, its templates, its translations and
   the listener that sends it.
 - [ ] **6. Close** — README, this file brought up to date, full review of the diff.
@@ -71,6 +73,13 @@ stable, and the developer reviewing before the next one starts.
   of them, none naming this module. `cache:clear --env=test --no-debug` before running the
   suites is what separates a real regression from that. Proven by an A/B: the same four
   pre-existing failures with the module on and with it off.
+- The back-office hook and the front-office hook are two different mechanisms. The front one
+  implements `ThemeHookInterface`, is collected through the autoconfigured `thelia.theme_hook`
+  tag and needs no row anywhere. The back-office one extends `BaseHook`, and
+  `RegisterHookListenersPass` creates its `module_hook` row **while the container is being
+  compiled**, per environment. A menu entry that renders in dev is simply absent in test until
+  the non-debug test container has been rebuilt once with the module active. That is what a
+  first run of the back-office proof looked like: a page that renders, a 200, and no entry.
 - PHPStan needs `scanDirectories: var/propel/dev/model` to see the generated Propel classes.
   Without it every accessor on the model stub is reported as undefined.
 
@@ -83,8 +92,19 @@ stable, and the developer reviewing before the next one starts.
   questions here, which the next phase should do, would keep it red. The test is the thing to
   change, not the exporter.
 
+## Proven in a running shop
+
+- The product page of a French visitor carries the answered French question and neither the
+  pending one nor the answered English one. The English page carries the English question
+  under an English heading. Checked over HTTP against the `work` theme.
+- The back-office side nav renders
+  `<a href="…/admin/module/product-questions" id="customer_menu_product_question">Customer
+  questions</a>` under Customers, in an authenticated request.
+
 ## Not proven yet
 
+- No browser has looked at the block: the Chrome extension was not connected, so the checks
+  above are HTTP. The front office has no styling of its own yet, which is phase 4.
 - `ON DELETE SET NULL` from `customer` has not been exercised against the database: every
   customer in the demo data has an order, and the core's own `fk_order_customer_id` blocks the
   delete. The rule is in `SHOW CREATE TABLE` and in the schema test.

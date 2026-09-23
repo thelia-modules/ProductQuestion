@@ -12,4 +12,8 @@ declare(strict_types=1);
  */
 
 return [
+    'Pending' => 'Pending',
+    'Answered' => 'Answered',
+    'Refused' => 'Refused',
+    'Unknown' => 'Unknown',
 ];

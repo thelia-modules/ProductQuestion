@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace ProductQuestion;
 
+use ProductQuestion\Repository\ProductQuestionRepository;
+use ProductQuestion\Repository\ProductQuestionStorageInterface;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
 use Thelia\Core\Install\Database;
@@ -34,6 +36,15 @@ final class ProductQuestion extends BaseModule
      * renaming I18n/backOffice/<same name> leaves every string untranslated, silently.
      */
     public const MESSAGE_DOMAIN_BO = 'productquestion.bo.default-twig';
+
+    /**
+     * Where the moderation list lives.
+     *
+     * The side-nav entry is a plain URL rather than a route name: the hook renders while the
+     * container is being built for the back office, and a module's routes are resolved by a
+     * router of their own.
+     */
+    public const ADMIN_LIST_PATH = '/admin/module/product-questions';
 
     public function postActivation(?ConnectionInterface $con = null): void
     {
@@ -64,5 +75,9 @@ final class ProductQuestion extends BaseModule
             ])
             ->autowire(true)
             ->autoconfigure(true);
+
+        // load() registers a service under its class name, so autowiring the contract the
+        // services depend on needs an alias of its own.
+        $servicesConfigurator->alias(ProductQuestionStorageInterface::class, ProductQuestionRepository::class);
     }
 }

@@ -11,9 +11,11 @@ declare(strict_types=1);
  * file that was distributed with this source code.
  */
 
-return [
-    'Pending' => 'En attente',
-    'Answered' => 'Répondue',
-    'Refused' => 'Refusée',
-    'Unknown' => 'Inconnu',
-];
+namespace ProductQuestion\Event;
+
+/**
+ * An administrator has just published an answer. The question is on the product page from now on.
+ */
+final class ProductQuestionAnsweredEvent extends ProductQuestionEvent
+{
+}
