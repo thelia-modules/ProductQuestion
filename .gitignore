@@ -1,0 +1,5 @@
+/.phpunit.cache/
+/vendor/
+
+# Propel generator byproduct of module:generate:sql
+/Config/sqldb.map

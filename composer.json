@@ -1,0 +1,13 @@
+{
+  "name": "thelia/product-question-module",
+  "description": "Customer questions about a product, answered from the Thelia back office",
+  "license": "LGPL-3.0+",
+  "type": "thelia-module",
+  "require": {
+    "thelia/core": "^3.0",
+    "thelia/installer": "~1.1"
+  },
+  "extra": {
+    "installer-name": "ProductQuestion"
+  }
+}

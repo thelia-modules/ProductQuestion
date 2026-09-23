@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!-- Empty on purpose. Hooks, loops, forms, commands and services are all discovered from
+     the classes themselves in Thelia 3; this file only still exists because
+     ModuleValidator requires one to be present. -->
+<config xmlns="http://thelia.net/schema/dic/config"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://thelia.net/schema/dic/config http://thelia.net/schema/dic/config/thelia-1.0.xsd">
+</config>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module xmlns="http://thelia.net/schema/dic/module"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://thelia.net/schema/dic/module http://thelia.net/schema/dic/module/module-2_2.xsd">
+    <fullnamespace>ProductQuestion\ProductQuestion</fullnamespace>
+    <descriptive locale="en_US">
+        <title>Product questions</title>
+        <description>Lets customers ask a question about a product, and administrators answer it from the back office. The answered questions appear on the product page.</description>
+    </descriptive>
+    <descriptive locale="fr_FR">
+        <title>Questions produit</title>
+        <description>Permet aux clients de poser une question sur un produit, et aux administrateurs d'y répondre depuis le back-office. Les questions répondues s'affichent sur la fiche produit.</description>
+    </descriptive>
+    <languages>
+        <language>en_US</language>
+        <language>fr_FR</language>
+    </languages>
+    <version>1.0.0</version>
+    <authors>
+        <author>
+            <name>Robin Morel</name>
+            <email>rmorel@openstudio.fr</email>
+        </author>
+    </authors>
+    <type>classic</type>
+    <thelia>3.0.0</thelia>
+    <stability>alpha</stability>
+</module>
