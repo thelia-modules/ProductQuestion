@@ -35,9 +35,9 @@ stable, and the developer reviewing before the next one starts.
 - [x] **2. Domain and hooks** — repository behind a storage contract, the services that ask,
   answer and refuse, the three events, the status catalogue, the text sanitiser, both hooks
   wired and proven in a running shop.
-- [ ] **3. Back office** — list and detail controllers, filters and pagination, the answer
-  form, ACL, French and English strings. Until this lands, the side-nav entry points at a
-  path no controller answers.
+- [x] **3. Back office** — moderation list with status tabs, filters and pagination, the
+  question screen with its answer form, refuse and delete, access granted on the module,
+  French and English strings.
 - [ ] **4. Front office** — the ask form, the Twig component replacing the plain template,
   the API resource for reading and posting, the rate limiter, the module stylesheet.
 - [ ] **5. Administrator notification** — the message, its templates, its translations and
@@ -80,6 +80,16 @@ stable, and the developer reviewing before the next one starts.
   compiled**, per environment. A menu entry that renders in dev is simply absent in test until
   the non-debug test container has been rebuilt once with the module active. That is what a
   first run of the back-office proof looked like: a page that renders, a 200, and no entry.
+- A module back-office template includes its partials by a path relative to its own
+  back-office directory, `ProductQuestion/_table.html.twig`. The `@ProductQuestionModule`
+  namespace points at the module's `templates/` root instead, so the namespaced form of the
+  same include is a loader error at render time and nowhere else.
+- `Thelia\Form\BaseForm::getView()` reads a property nothing has initialised unless the form
+  went through the framework's own rendering path. A controller hands a view to Twig with
+  `getForm()->createView()`.
+- `checkAuth()` answers a 403 error page, never a redirect to the login form, so an anonymous
+  visitor gets 403 on every module admin screen. `/admin/module/comments` does the same. The
+  access is refused either way; only the courtesy differs.
 - PHPStan needs `scanDirectories: var/propel/dev/model` to see the generated Propel classes.
   Without it every accessor on the model stub is reported as undefined.
 
@@ -100,11 +110,24 @@ stable, and the developer reviewing before the next one starts.
 - The back-office side nav renders
   `<a href="…/admin/module/product-questions" id="customer_menu_product_question">Customer
   questions</a>` under Customers, in an authenticated request.
+- The moderation screens, in authenticated requests against a real database: the list shows a
+  question with its author and status, the status filter keeps only what it asks for, the
+  answer form publishes and writes the four columns, a post with no CSRF token changes
+  nothing, and refusing moves the status while leaving the drafted answer in place.
+- The whole chain in one run: a pending question renders nothing on the product page, an
+  administrator answers it through the back-office form, and the same product page then
+  carries the question and the answer.
+- An anonymous request to the moderation list is refused and leaks no question text.
 
 ## Not proven yet
 
-- No browser has looked at the block: the Chrome extension was not connected, so the checks
-  above are HTTP. The front office has no styling of its own yet, which is phase 4.
+- No browser has looked at any screen: the Chrome extension was not connected, so every check
+  above is HTTP or a kernel request. Nothing is said about layout, and the front office has no
+  styling of its own yet, which is phase 4.
+- The back-office screens have no permanent regression test. The proofs above ran from a
+  temporary test inside the Thelia repository, which was deleted afterwards: the module's own
+  suite boots no kernel, so it cannot hold them. Giving the module a second, kernel-backed
+  test suite is the obvious next step and is not done.
 - `ON DELETE SET NULL` from `customer` has not been exercised against the database: every
   customer in the demo data has an order, and the core's own `fk_order_customer_id` blocks the
   delete. The rule is in `SHOW CREATE TABLE` and in the schema test.

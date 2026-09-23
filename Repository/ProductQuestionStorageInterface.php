@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace ProductQuestion\Repository;
 
 use ProductQuestion\Model\ProductQuestion;
+use ProductQuestion\Service\BackOffice\ProductQuestionListFilters;
 
 /**
  * Every read and write the module's services make, behind a contract.
@@ -55,6 +56,26 @@ interface ProductQuestionStorageInterface
      * @return array<int, int>
      */
     public function countByStatus(): array;
+
+    /**
+     * One page of the moderation list, and how many rows the filters match in total.
+     *
+     * Unlike the front-office read, every status is reachable here: this is the screen a
+     * moderator uses to find what is waiting for them.
+     *
+     * @return array{items: list<ProductQuestion>, total: int}
+     */
+    public function searchForModeration(ProductQuestionListFilters $filters): array;
+
+    /**
+     * The languages questions have actually been asked in, sorted.
+     *
+     * The filter offers these rather than every language the shop declares: a language
+     * nobody has written in would filter to an empty list every time.
+     *
+     * @return list<string>
+     */
+    public function findUsedLocales(): array;
 
     public function save(ProductQuestion $question): void;
 

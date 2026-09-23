@@ -1,0 +1,35 @@
+{% set domain = 'productquestion.bo.default-twig' %}
+
+<div class="table-responsive">
+    <table class="table table-striped align-middle" data-testid="product-question-table">
+        <thead>
+            <tr>
+                <th scope="col">{{ 'Question'|trans({}, domain) }}</th>
+                <th scope="col">{{ 'Product'|trans({}, domain) }}</th>
+                <th scope="col">{{ 'Customer'|trans({}, domain) }}</th>
+                <th scope="col">{{ 'Language'|trans({}, domain) }}</th>
+                <th scope="col">{{ 'Status'|trans({}, domain) }}</th>
+                <th scope="col">{{ 'Asked on'|trans({}, domain) }}</th>
+                <th scope="col"><span class="visually-hidden">{{ 'Actions'|trans({}, domain) }}</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+                <tr data-testid="product-question-row-{{ row.id }}">
+                    <td>{{ row.excerpt }}</td>
+                    <td>{{ row.productTitle ?? ('Product #%id%'|trans({'%id%': row.productId}, domain)) }}</td>
+                    <td>{{ row.customerName ?? ('Deleted account'|trans({}, domain)) }}</td>
+                    <td>{{ row.locale }}</td>
+                    <td><span class="badge text-bg-{{ row.status.css }}">{{ row.status.label }}</span></td>
+                    <td>{{ row.createdAt ? row.createdAt|date('d/m/Y H:i') : '' }}</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-primary"
+                           href="{{ path('productquestion_module_edit', {id: row.id}) }}">
+                            {{ 'Open'|trans({}, domain) }}
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

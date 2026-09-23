@@ -1,0 +1,101 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% set domain = 'productquestion.bo.default-twig' %}
+
+{% block title %}{{ 'Customer question'|trans({}, domain) }}{% endblock %}
+{% block body_testid %}product-question-edit-page{% endblock %}
+
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('admin.home') }}">{{ 'Home'|trans({}, domain) }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ path('productquestion_module_list') }}">{{ 'Customer questions'|trans({}, domain) }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">#{{ question.id }}</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid" data-testid="product-question-edit-content">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="h3 mb-0">{{ 'Customer question'|trans({}, domain) }}</h1>
+            <span class="badge text-bg-{{ status.css }}" data-testid="product-question-status">{{ status.label }}</span>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-lg-7">
+                <div class="card mb-3">
+                    <div class="card-header">{{ 'The question'|trans({}, domain) }}</div>
+                    <div class="card-body">
+                        <p class="mb-3" data-testid="product-question-content">{{ question.content|nl2br }}</p>
+                        <p class="text-muted mb-0">
+                            {{ 'Asked on'|trans({}, domain) }}
+                            {{ question.createdAt ? question.createdAt|date('d/m/Y H:i') : '' }}
+                            — {{ 'Language'|trans({}, domain) }} {{ question.locale }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">{{ 'Answer'|trans({}, domain) }}</div>
+                    <div class="card-body">
+                        {{ form_start(form, {action: path('productquestion_module_answer', {id: question.id}), method: 'POST', attr: {'data-testid': 'product-question-answer-form'}}) }}
+                            {{ form_row(form.answer) }}
+                            <button type="submit" class="btn btn-primary" data-testid="product-question-publish">
+                                {{ question.answer ? 'Update the answer'|trans({}, domain) : 'Publish the answer'|trans({}, domain) }}
+                            </button>
+                        {{ form_end(form) }}
+
+                        <p class="text-muted mt-3 mb-0">
+                            {{ 'Publishing an answer puts the question on the product page.'|trans({}, domain) }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card mb-3">
+                    <div class="card-header">{{ 'Who and what'|trans({}, domain) }}</div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <span class="text-muted d-block">{{ 'Customer'|trans({}, domain) }}</span>
+                            {% if customerUrl %}
+                                <a href="{{ customerUrl }}" data-testid="product-question-customer-link">{{ 'Open the customer record'|trans({}, domain) }}</a>
+                            {% else %}
+                                {{ 'Deleted account'|trans({}, domain) }}
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item">
+                            <span class="text-muted d-block">{{ 'Product'|trans({}, domain) }}</span>
+                            <a href="{{ productUrl }}" data-testid="product-question-product-link">{{ productTitle ?? ('Product #%id%'|trans({'%id%': question.productId}, domain)) }}</a>
+                        </li>
+                        {% if question.answeredAt %}
+                            <li class="list-group-item">
+                                <span class="text-muted d-block">{{ 'Answered on'|trans({}, domain) }}</span>
+                                {{ question.answeredAt|date('d/m/Y H:i') }}
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">{{ 'Moderation'|trans({}, domain) }}</div>
+                    <div class="card-body d-flex gap-2">
+                        <form method="POST" action="{{ path('productquestion_module_refuse', {id: question.id}) }}">
+                            <input type="hidden" name="_token" value="{{ token }}">
+                            <button type="submit" class="btn btn-outline-danger" data-testid="product-question-refuse">
+                                {{ 'Refuse the question'|trans({}, domain) }}
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ path('productquestion_module_delete', {id: question.id}) }}">
+                            <input type="hidden" name="_token" value="{{ token }}">
+                            <button type="submit" class="btn btn-outline-secondary" data-testid="product-question-delete">
+                                {{ 'Delete'|trans({}, domain) }}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

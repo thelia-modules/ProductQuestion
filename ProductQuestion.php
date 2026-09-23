@@ -15,6 +15,8 @@ namespace ProductQuestion;
 
 use ProductQuestion\Repository\ProductQuestionRepository;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
+use ProductQuestion\Repository\ProductTitleRepository;
+use ProductQuestion\Repository\ProductTitleSourceInterface;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
 use Thelia\Core\Install\Database;
@@ -79,5 +81,6 @@ final class ProductQuestion extends BaseModule
         // load() registers a service under its class name, so autowiring the contract the
         // services depend on needs an alias of its own.
         $servicesConfigurator->alias(ProductQuestionStorageInterface::class, ProductQuestionRepository::class);
+        $servicesConfigurator->alias(ProductTitleSourceInterface::class, ProductTitleRepository::class);
     }
 }

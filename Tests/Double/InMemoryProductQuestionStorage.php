@@ -16,6 +16,7 @@ namespace ProductQuestion\Tests\Double;
 use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
+use ProductQuestion\Service\BackOffice\ProductQuestionListFilters;
 
 /**
  * The storage contract, held in an array.
@@ -117,6 +118,59 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
         }
 
         return $counts;
+    }
+
+    /**
+     * @return array{items: list<ProductQuestion>, total: int}
+     */
+    public function searchForModeration(ProductQuestionListFilters $filters): array
+    {
+        $matching = [];
+
+        foreach ($this->questions as $question) {
+            if (null !== $filters->status && $question->getStatus() !== $filters->status) {
+                continue;
+            }
+
+            if (null !== $filters->productId && $question->getProductId() !== $filters->productId) {
+                continue;
+            }
+
+            if (null !== $filters->customerId && $question->getCustomerId() !== $filters->customerId) {
+                continue;
+            }
+
+            if (null !== $filters->locale && $question->getLocale() !== $filters->locale) {
+                continue;
+            }
+
+            $matching[] = $question;
+        }
+
+        return [
+            'items' => \array_slice($matching, $filters->offset(), $filters->limit),
+            'total' => \count($matching),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function findUsedLocales(): array
+    {
+        $locales = [];
+
+        foreach ($this->questions as $question) {
+            $locale = $question->getLocale();
+
+            if (\is_string($locale) && '' !== $locale) {
+                $locales[$locale] = $locale;
+            }
+        }
+
+        sort($locales);
+
+        return $locales;
     }
 
     public function save(ProductQuestion $question): void

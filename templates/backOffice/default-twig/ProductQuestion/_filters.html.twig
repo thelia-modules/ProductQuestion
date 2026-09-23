@@ -1,0 +1,43 @@
+{% set domain = 'productquestion.bo.default-twig' %}
+
+<form method="get" action="{{ path('productquestion_module_list') }}" class="row g-2 align-items-end mb-3" data-testid="product-question-filters">
+    {% if filters.status is not null %}
+        <input type="hidden" name="status" value="{{ filters.status }}">
+    {% endif %}
+
+    <div class="col-auto">
+        <label class="form-label" for="pq-locale">{{ 'Language'|trans({}, domain) }}</label>
+        <select class="form-select" id="pq-locale" name="locale">
+            <option value="">{{ 'Every language'|trans({}, domain) }}</option>
+            {% for locale in locales %}
+                <option value="{{ locale }}" {{ filters.locale == locale ? 'selected' : '' }}>{{ locale }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-auto">
+        <label class="form-label" for="pq-product">{{ 'Product id'|trans({}, domain) }}</label>
+        <input class="form-control" id="pq-product" type="number" min="1" name="product_id" value="{{ filters.productId }}">
+    </div>
+
+    <div class="col-auto">
+        <label class="form-label" for="pq-customer">{{ 'Customer id'|trans({}, domain) }}</label>
+        <input class="form-control" id="pq-customer" type="number" min="1" name="customer_id" value="{{ filters.customerId }}">
+    </div>
+
+    <div class="col-auto">
+        <label class="form-label" for="pq-order">{{ 'Sort by'|trans({}, domain) }}</label>
+        <select class="form-select" id="pq-order" name="order">
+            <option value="created_reverse" {{ filters.order == 'created_reverse' ? 'selected' : '' }}>{{ 'Most recent first'|trans({}, domain) }}</option>
+            <option value="created" {{ filters.order == 'created' ? 'selected' : '' }}>{{ 'Oldest first'|trans({}, domain) }}</option>
+            <option value="status" {{ filters.order == 'status' ? 'selected' : '' }}>{{ 'Pending first'|trans({}, domain) }}</option>
+        </select>
+    </div>
+
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">{{ 'Filter'|trans({}, domain) }}</button>
+        {% if filters.hasAnyFilter %}
+            <a class="btn btn-outline-secondary" href="{{ path('productquestion_module_list') }}">{{ 'Clear'|trans({}, domain) }}</a>
+        {% endif %}
+    </div>
+</form>

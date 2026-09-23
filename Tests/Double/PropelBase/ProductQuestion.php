@@ -45,6 +45,8 @@ class ProductQuestion
     /** How many times delete() was called on this object. */
     public int $deleteCount = 0;
 
+    private ?object $customer = null;
+
     private bool $new = true;
 
     public function getId(): ?int
@@ -175,6 +177,23 @@ class ProductQuestion
     public function setUpdatedAt(string|int|\DateTimeInterface|null $v = null): static
     {
         $this->updated_at = $v;
+
+        return $this;
+    }
+
+    /**
+     * The generated class exposes the customer of the row through the foreign key. Typed as
+     * an object here rather than as Thelia\Model\Customer: that class extends a Propel base
+     * of its own, which these tests deliberately run without.
+     */
+    public function getCustomer(mixed $con = null): ?object
+    {
+        return $this->customer;
+    }
+
+    public function setCustomer(?object $v = null): static
+    {
+        $this->customer = $v;
 
         return $this;
     }
