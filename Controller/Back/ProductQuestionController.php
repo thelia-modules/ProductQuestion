@@ -230,6 +230,6 @@ class ProductQuestionController extends BaseAdminController
 
     private function backToQuestion(int $id): RedirectResponse
     {
-        return new RedirectResponse(URL::getInstance()->absoluteUrl('/admin/module/ProductQuestion/'.$id));
+        return new RedirectResponse(URL::getInstance()->absoluteUrl(ProductQuestionModule::ADMIN_LIST_PATH.'/'.$id));
     }
 }

@@ -40,13 +40,12 @@ final class ProductQuestion extends BaseModule
     public const MESSAGE_DOMAIN_BO = 'productquestion.bo.default-twig';
 
     /**
-     * Where the moderation list lives.
+     * Where the moderation list lives: the URL the module list's Configure button points at.
      *
-     * The side-nav entry is a plain URL rather than a route name: the hook renders while the
-     * container is being built for the back office, and a module's routes are resolved by a
-     * router of their own.
+     * The controller redirects to it after a write, as a plain URL rather than a route name,
+     * because the module's routes are resolved by a router of their own.
      */
-    public const ADMIN_LIST_PATH = '/admin/module/product-questions';
+    public const ADMIN_LIST_PATH = '/admin/module/ProductQuestion';
 
     public function postActivation(?ConnectionInterface $con = null): void
     {

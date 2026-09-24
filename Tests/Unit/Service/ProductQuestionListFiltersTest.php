@@ -22,7 +22,7 @@ final class ProductQuestionListFiltersTest extends TestCase
 {
     private function fromQuery(string $queryString): ProductQuestionListFilters
     {
-        return ProductQuestionListFilters::fromRequest(Request::create('/admin/module/product-questions?'.$queryString));
+        return ProductQuestionListFilters::fromRequest(Request::create('/admin/module/ProductQuestion?'.$queryString));
     }
 
     public function testAnEmptyQueryStringAsksForTheWholeFirstPage(): void
