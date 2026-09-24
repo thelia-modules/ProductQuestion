@@ -100,7 +100,10 @@ class ProductQuestionController extends BaseAdminController
 
         return $this->render('product-question-edit', [
             'question' => $question,
-            'status' => $this->statusCatalog->get($question->getStatus()),
+            // Not `status`: TwigParser promotes every variable handed to a back-office template to
+            // a Twig global, and the web debug toolbar reads a global of that name to colour its
+            // blocks — an array there is a 500 on the whole page, in dev only.
+            'questionStatus' => $this->statusCatalog->get($question->getStatus()),
             'form' => $form->getForm()->createView(),
             // Built here rather than in the template: a module must not hard-code the admin
             // routes of the core in its markup.
@@ -110,8 +113,9 @@ class ProductQuestionController extends BaseAdminController
             'productUrl' => URL::getInstance()->absoluteUrl('/admin/products/update', ['product_id' => $productId]),
             'productTitle' => $this->productTitles->titleFor($productId, $request->getLocale()),
             // The two moderation buttons are plain forms, not Thelia forms, so they carry the
-            // session token by hand. The answer form gets its own from BaseForm.
-            'token' => $this->tokenProvider->assignToken(),
+            // session token by hand. The answer form gets its own from BaseForm. Not `token`:
+            // that name is the profiler's, see questionStatus above.
+            'csrfToken' => $this->tokenProvider->assignToken(),
         ]);
     }
 

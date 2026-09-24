@@ -19,7 +19,7 @@
     <div class="container-fluid" data-testid="product-question-edit-content">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h1 class="h3 mb-0">{{ 'Customer question'|trans({}, domain) }}</h1>
-            <span class="badge text-bg-{{ status.css }}" data-testid="product-question-status">{{ status.label }}</span>
+            <span class="badge text-bg-{{ questionStatus.css }}" data-testid="product-question-status">{{ questionStatus.label }}</span>
         </div>
 
         <div class="row g-3">
@@ -39,6 +39,9 @@
                 <div class="card">
                     <div class="card-header">{{ 'Answer'|trans({}, domain) }}</div>
                     <div class="card-body">
+                        {# The theme's form theme, as its own edit screens apply it: without it the
+                           row renders with Twig's bare layout, label beside a narrow textarea. #}
+                        {% form_theme form with bo_form_themes only %}
                         {{ form_start(form, {action: path('productquestion_module_answer', {id: question.id}), method: 'POST', attr: {'data-testid': 'product-question-answer-form'}}) }}
                             {{ form_row(form.answer) }}
                             <button type="submit" class="btn btn-primary" data-testid="product-question-publish">
@@ -82,13 +85,13 @@
                     <div class="card-header">{{ 'Moderation'|trans({}, domain) }}</div>
                     <div class="card-body d-flex gap-2">
                         <form method="POST" action="{{ path('productquestion_module_refuse', {id: question.id}) }}">
-                            <input type="hidden" name="_token" value="{{ token }}">
+                            <input type="hidden" name="_token" value="{{ csrfToken }}">
                             <button type="submit" class="btn btn-outline-danger" data-testid="product-question-refuse">
                                 {{ 'Refuse the question'|trans({}, domain) }}
                             </button>
                         </form>
                         <form method="POST" action="{{ path('productquestion_module_delete', {id: question.id}) }}">
-                            <input type="hidden" name="_token" value="{{ token }}">
+                            <input type="hidden" name="_token" value="{{ csrfToken }}">
                             <button type="submit" class="btn btn-outline-secondary" data-testid="product-question-delete">
                                 {{ 'Delete'|trans({}, domain) }}
                             </button>
