@@ -43,8 +43,28 @@ they are a workflow the module implements, not a list a shop administrator can a
 ## Front office
 
 The module answers the `product.bottom` theme hook, so a theme calling that hook shows the
-block with no further work. Only answered questions appear, and only those asked in the
-language being browsed. A product with none renders nothing at all.
+block with no further work: a Symfony UX live component with the answered questions of the
+product in the language being browsed, and the form to ask one. The form is drawn for a
+signed-in customer only; a visitor is invited to sign in. A question starts pending and
+appears once the shop has answered it.
+
+The block carries its own stylesheet, `templates/frontOffice/default/assets/product-question.css`,
+linked by the hook through `module_asset()`. Type scale and colours are the theme's classes.
+
+Two budgets guard the ask, declared by the module itself: ten questions per customer per hour,
+three per customer and product.
+
+## Front API
+
+For a front office that talks to the API rather than to Twig:
+
+| Operation | Who | What |
+|---|---|---|
+| `GET /api/front/product_questions?productId=&locale=` | anyone | The answered questions of one product, in one language (the request's when `locale` is absent). Paginated. |
+| `GET /api/front/product_questions/{id}` | anyone | One answered question. A pending or refused one is a 404. |
+| `POST /api/front/account/product_questions` | a signed-in customer (JWT) | `{"productId": 12, "content": "…", "locale": "fr_FR"}`. Answers 201 with `published: false`, 422 on an invalid text, 429 past the budgets. |
+
+Neither the customer who asked nor the administrator who answered is in any payload.
 
 ## Back office
 

@@ -22,7 +22,11 @@ product page, in the language it was asked in.
 | Only a signed-in customer may ask | The back office links to the customer record, and an account is what makes that link exist. `customer_id` is nullable in the database for the SET NULL rule alone. |
 | No mention of the answer's author on the product page | Decided with the developer: the answer is the shop's, unsigned. |
 | Top-level menu entry, right after Option | `main.in-top-menu-items`, position 4. The side nav folds every section's sub-entries behind a click, so an entry filed under Customers was invisible until that section was opened: the developer asked for it at the first level, after the content blocks and the Options entry. |
-| Front office shows the visitor's locale only | A question asked in French is answered in French. |
+| Front office shows the visitor's locale only | A question asked in French is answered in French. The language travels in the live component's props: the request a live action arrives on is not the product page. |
+| Front block is a Symfony UX live component, posting through `ProductQuestionAsker` | The norm of the Flexy theme (cart, addresses, Comment): no fetch, no controller. The component is the door the theme uses; the API is the door a headless front uses; both go through the same service. |
+| Rate limits: 10 questions per customer per hour, 3 per customer and product | Sliding windows declared by the module in `configureContainer()`, keyed on the account — only a signed-in customer reaches the ask. The API and the component spend the same budgets, before anything is read. |
+| Front API: `GET /front/product_questions?productId=` and `/{id}` public, `POST /front/account/product_questions` | The list needs a product and shows answered questions only, in the language asked for or the request's; the firewall locks `/front/account` to ROLE_CUSTOMER and the operation says so again. Neither who asked nor who answered is in any payload. |
+| Module stylesheet at `templates/frontOffice/default/assets/product-question.css`, linked by the theme hook via `module_asset()` | The theme's Tailwind scans a closed list of its own directories: a utility class written in a module template is never generated. Geometry lives in the module's own file, type scale and colours are the theme's classes. |
 | No admin API in v1 | Everything goes through the back office. |
 | Admin screens live at `/admin/module/ProductQuestion` | The module has nothing to configure, so the **Configure** button of the module list, which points at that URL, opens the moderation list instead of an empty configuration page. The module route shadows the core `admin.module.configure` route for this one code. |
 
@@ -39,7 +43,7 @@ stable, and the developer reviewing before the next one starts.
 - [x] **3. Back office** — moderation list with status tabs, filters and pagination, the
   question screen with its answer form, refuse and delete, access granted on the module,
   French and English strings.
-- [ ] **4. Front office** — the ask form, the Twig component replacing the plain template,
+- [x] **4. Front office** — the ask form, the live component replacing the plain template,
   the API resource for reading and posting, the rate limiter, the module stylesheet.
 - [ ] **5. Administrator notification** — the message, its templates, its translations and
   the listener that sends it.
@@ -98,6 +102,34 @@ stable, and the developer reviewing before the next one starts.
   access is refused either way; only the courtesy differs.
 - PHPStan needs `scanDirectories: var/propel/dev/model` to see the generated Propel classes.
   Without it every accessor on the model stub is reported as undefined.
+- `TwigParser::assign()` registers every variable handed to a back-office template as a **Twig
+  global**. The web debug toolbar is rendered into the same environment and reads `status`,
+  `token`, `name`, `link`, `collector`, `profile` from its context: a page variable named
+  `status` holding an array is a 500 on the whole page — in dev only, with a message about
+  `toolbar_item.html.twig` that names nothing of the module. Test runs never see it, the
+  toolbar being off. Page variables are named `questionStatus` and `csrfToken` for that reason.
+- A back-office template of a module must apply `{% form_theme form with bo_form_themes only %}`
+  itself, as the theme's own edit screens do. Without it a `form_row()` renders Twig's bare
+  layout — label beside a narrow textarea — and nothing says so.
+- API Platform validates the **Default** group unless the operation names another. Every write
+  constraint of the resource carries the write group, so a `Post` without
+  `validationContext: ['groups' => [...]]` reaches the processor with an unchecked body, and
+  the rate limiter pays for a text the service then refuses. The `Comment` module in this
+  install has that exact hole.
+- The theme's Tailwind entry point declares `source(none)` and a closed list of `@source`
+  directories, all inside `templates/frontOffice/work/`. A class used only by a module template
+  is never generated; the classes that do work there (`h2`, `paragraph-*`, `text-*`,
+  `container-l`) work because the theme uses them elsewhere.
+- `module_asset()` resolves against the module template directories listed in
+  `var/cache/<env>/module_template_dirs.php`, written once. A directory added to a module after
+  that file exists is not found and the link renders as `href=""`, with the error in Tlog only.
+  `cache:clear` drops the file; an earlier run of it here failed silently, which is what made
+  the symptom look like a resolver bug.
+- Twig's `|trans` on the front office knows the theme catalogue only. Every module string of the
+  component is translated in PHP with the module's domain and exposed as `this.labels`, the way
+  Comment does it.
+- Null properties are left out of API payloads by the serializer configuration: a client reading
+  a freshly posted question gets no `answer` key rather than `"answer": null`.
 
 ## Standing outside this module
 
@@ -125,12 +157,32 @@ stable, and the developer reviewing before the next one starts.
   administrator answers it through the back-office form, and the same product page then
   carries the question and the answer.
 - An anonymous request to the moderation list is refused and leaks no question text.
+- Phase 4, over HTTP against the test database (temporary test in the Thelia repository,
+  deleted afterwards): the product page of a visitor carries the block, the sign-in
+  invitation and no form; the page of a signed-in customer carries the form and no invitation;
+  the API refuses an anonymous post with 401, stores a customer's post pending with the
+  customer read off the JWT, lists nothing while the question is pending, answers 404 on its
+  id, lists it with its answer once the shop has answered, refuses a list without a product
+  with 400, refuses a too-short text with 422 without spending a rate-limit token, and answers
+  429 on the fourth post about one product.
+- Phase 4, in a real browser (Playwright, Chromium, 1440 px, the Chrome extension not being
+  connected): a visitor sees the block styled by the module stylesheet; a freshly registered
+  customer sees the form, gets a field error on a three-character question, gets the success
+  notice and an emptied field on a real one, and does not see it on the page; the same question
+  is then answered from the back-office edit screen by the demo administrator and appears on
+  the product page with its answer. The moderation list and edit screens were looked at for the
+  first time in this run: the edit screen was a 500 (profiler variable names, fixed) and the
+  answer form rendered bare (form theme, fixed).
 
 ## Not proven yet
 
-- No browser has looked at any screen: the Chrome extension was not connected, so every check
-  above is HTTP or a kernel request. Nothing is said about layout, and the front office has no
-  styling of its own yet, which is phase 4.
+- The three front-office states and the two back-office screens have been looked at in a
+  browser at 1440 px only; nothing is said about narrower viewports.
+- `TokenCurrentCustomer` has no unit test: it needs a `Thelia\Model\Customer`, whose Propel
+  base class is not in the module's suite. It is exercised by the HTTP proof above (JWT post
+  stored under the right customer), which is not a permanent test.
+- The live action `ask()` itself is proven in the browser and by reading the template, not by a
+  unit test: rendering a live component needs a kernel and a session.
 - The back-office screens have no permanent regression test. The proofs above ran from a
   temporary test inside the Thelia repository, which was deleted afterwards: the module's own
   suite boots no kernel, so it cannot hold them. Giving the module a second, kernel-backed

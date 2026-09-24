@@ -17,7 +17,10 @@ use ProductQuestion\Repository\ProductQuestionRepository;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
 use ProductQuestion\Repository\ProductTitleRepository;
 use ProductQuestion\Repository\ProductTitleSourceInterface;
+use ProductQuestion\Service\Front\CurrentCustomerInterface;
+use ProductQuestion\Service\Front\SecurityContextCurrentCustomer;
 use Propel\Runtime\Connection\ConnectionInterface;
+use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
 use Thelia\Core\Install\Database;
 use Thelia\Module\BaseModule;
@@ -60,6 +63,31 @@ final class ProductQuestion extends BaseModule
         self::setConfigValue('is_initialized', '1');
     }
 
+    /**
+     * The budgets ProductQuestionAskLimiter spends on every question a customer asks.
+     *
+     * Declared here rather than in the shop's framework configuration so that activating the
+     * module is enough. Sliding windows: a customer who hit the limit gets it back gradually
+     * rather than all at once on the hour.
+     */
+    public static function configureContainer(ContainerConfigurator $containerConfigurator): void
+    {
+        $containerConfigurator->extension('framework', [
+            'rate_limiter' => [
+                'product_question_ask_per_customer' => [
+                    'policy' => 'sliding_window',
+                    'limit' => 10,
+                    'interval' => '1 hour',
+                ],
+                'product_question_ask_per_product' => [
+                    'policy' => 'sliding_window',
+                    'limit' => 3,
+                    'interval' => '1 hour',
+                ],
+            ],
+        ], prepend: true);
+    }
+
     public static function configureServices(ServicesConfigurator $servicesConfigurator): void
     {
         $servicesConfigurator->load(self::getModuleCode().'\\', __DIR__)
@@ -81,5 +109,6 @@ final class ProductQuestion extends BaseModule
         // services depend on needs an alias of its own.
         $servicesConfigurator->alias(ProductQuestionStorageInterface::class, ProductQuestionRepository::class);
         $servicesConfigurator->alias(ProductTitleSourceInterface::class, ProductTitleRepository::class);
+        $servicesConfigurator->alias(CurrentCustomerInterface::class, SecurityContextCurrentCustomer::class);
     }
 }

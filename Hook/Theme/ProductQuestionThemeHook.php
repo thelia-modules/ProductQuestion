@@ -13,10 +13,7 @@ declare(strict_types=1);
 
 namespace ProductQuestion\Hook\Theme;
 
-use ProductQuestion\ProductQuestion;
-use ProductQuestion\Repository\ProductQuestionStorageInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Core\Hook\Theme\ThemeHookInterface;
 use Twig\Environment;
 
@@ -27,8 +24,10 @@ use Twig\Environment;
  * is collected through the autoconfigured thelia.theme_hook tag, which is a different
  * mechanism from the back-office hooks and needs no row in the hook table.
  *
- * A product with no answered question in the visitor's language renders nothing at all,
- * rather than an empty heading.
+ * The hook itself only links the module's stylesheet and mounts the ProductQuestion live
+ * component with the product and the language being browsed. Whether there is anything to
+ * read, and whether the visitor may ask, is the component's business: a product nobody has
+ * asked about still carries the form for a signed-in customer.
  */
 final readonly class ProductQuestionThemeHook implements ThemeHookInterface
 {
@@ -36,9 +35,7 @@ final readonly class ProductQuestionThemeHook implements ThemeHookInterface
 
     public function __construct(
         private Environment $twig,
-        private ProductQuestionStorageInterface $storage,
         private RequestStack $requestStack,
-        private TranslatorInterface $translator,
     ) {
     }
 
@@ -65,18 +62,9 @@ final readonly class ProductQuestionThemeHook implements ThemeHookInterface
             return '';
         }
 
-        $questions = $this->storage->findAnsweredForProduct($productId, $locale);
-
-        if ([] === $questions) {
-            return '';
-        }
-
         return $this->twig->render('@ProductQuestionModule/theme_hook/product-question.html.twig', [
-            'questions' => $questions,
-            'labels' => [
-                'title' => $this->trans('Customer questions'),
-                'answer' => $this->trans('Answer from the shop'),
-            ],
+            'productId' => $productId,
+            'locale' => $locale,
         ]);
     }
 
@@ -96,10 +84,5 @@ final readonly class ProductQuestionThemeHook implements ThemeHookInterface
         }
 
         return (int) ($parameters['product_id'] ?? 0);
-    }
-
-    private function trans(string $key): string
-    {
-        return $this->translator->trans($key, [], ProductQuestion::MESSAGE_DOMAIN);
     }
 }

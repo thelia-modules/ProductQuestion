@@ -1,0 +1,80 @@
+{# The theme's form theme for every field, plus the module's own block for the textarea, which
+   the theme renders two rows high. #}
+{% form_theme form with flexy_form_themes|merge(['@ProductQuestionModule/form/product_question_form_theme.html.twig']) only %}
+
+{# Read out here: `this` rescopes inside the nested <twig:> components. #}
+{% set labels = this.labels %}
+{% set questions = this.questions %}
+
+{# Geometry lives in the module's own stylesheet (assets/product-question.css, linked by the
+   theme hook): utility classes only this module uses are not in the theme's Tailwind sources,
+   so they would never be generated. What is kept from the theme is its type scale and its
+   colours, which are what makes the block look like the rest of the shop. #}
+{# No id of its own: the live component carries one already, and two id attributes on one
+   element is invalid markup. #}
+<section {{ attributes.defaults({class: 'ProductQuestion container-l'}) }} data-testid="product-question-block">
+    <header class="ProductQuestion-header">
+        <h2 class="h2 text-black">{{ labels.title }}</h2>
+    </header>
+
+    {% if questions is not empty %}
+        <ul class="ProductQuestion-list" data-testid="product-question-list">
+            {% for question in questions %}
+                <li class="ProductQuestion-item" data-testid="product-question-item-{{ question.id }}">
+                    <p class="ProductQuestion-question paragraph-2 text-black">{{ question.content|nl2br }}</p>
+                    <div class="ProductQuestion-answer">
+                        <p class="ProductQuestion-answerLabel paragraph-4 text-grey">
+                            {{ labels.answer }}
+                            {% if question.answeredAt %}
+                                <time datetime="{{ question.answeredAt|date('Y-m-d') }}">{{ question.answeredAt|date('d/m/Y') }}</time>
+                            {% endif %}
+                        </p>
+                        <p class="paragraph-3 text-black">{{ question.answer|nl2br }}</p>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="ProductQuestion-empty paragraph-3 text-grey" data-testid="product-question-empty">{{ labels.empty }}</p>
+    {% endif %}
+
+    {% if this.feedback %}
+        <twig:Molecules:SnackBar:Base variant="success" withIcon text="{{ this.feedback }}" class="ProductQuestion-notice" data-testid="product-question-feedback" />
+    {% endif %}
+
+    {% if this.error %}
+        <twig:Molecules:SnackBar:Base variant="error" withIcon text="{{ this.error }}" class="ProductQuestion-notice" data-testid="product-question-error" />
+    {% endif %}
+
+    {% if this.canAsk %}
+        <div class="ProductQuestion-form">
+            <h3 class="h4 text-black ProductQuestion-formTitle">{{ labels.ask }}</h3>
+
+            {{ form_start(form, {
+                attr: {
+                    class: 'ProductQuestion-formFields',
+                    'data-action': 'live#action:prevent',
+                    'data-live-action-param': 'ask',
+                    'data-testid': 'product-question-form',
+                },
+            }) }}
+
+            {# The Flexy form theme renders nothing for `form_errors`: the errors carried by the
+               form itself rather than by its field are shown here. #}
+            {% for formError in form.vars.errors %}
+                <twig:Molecules:SnackBar:Base variant="error" withIcon text="{{ formError.message }}" />
+            {% endfor %}
+
+            {{ form_row(form.content, {attr: {rows: 4}}) }}
+
+            <twig:Molecules:Button:Base text="{{ labels.send }}" type="submit" class="ProductQuestion-submit" data-testid="product-question-submit" />
+
+            {{ form_end(form) }}
+        </div>
+    {% else %}
+        <p class="ProductQuestion-signIn paragraph-3 text-black" data-testid="product-question-sign-in">
+            {{ labels.signIn }}
+            <a class="ProductQuestion-signInLink" href="{{ path('customer_login') }}">{{ labels.signInLink }}</a>
+        </p>
+    {% endif %}
+</section>
