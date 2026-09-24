@@ -52,6 +52,9 @@ final readonly class ProductQuestionAnswerer
             throw InvalidProductQuestionException::answerTooLong(self::MAXIMUM_LENGTH);
         }
 
+        // Read before the status moves: this is what tells a first publication from an edit.
+        $firstAnswer = !$question->isAnswered();
+
         $question
             ->setAnswer($clean)
             ->setAnsweredAt(new \DateTimeImmutable())
@@ -62,7 +65,7 @@ final readonly class ProductQuestionAnswerer
 
         $this->storage->save($question);
 
-        $this->dispatcher->dispatch(new ProductQuestionAnsweredEvent($question));
+        $this->dispatcher->dispatch(new ProductQuestionAnsweredEvent($question, $firstAnswer));
 
         return $question;
     }

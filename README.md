@@ -75,7 +75,11 @@ other in Configuration > Mailing templates; its templates live in `templates/ema
 A shop with no notification address gets no mail and one line in the Thelia log; the question
 is stored either way.
 
-A shop that activated version 1.0.0 gets the message on `php Thelia module:refresh`.
+The customer is told once, when the shop first publishes its answer: their question, the
+answer and a link to the product page, in the language they asked in. Rewriting the answer
+later sends nothing. The message is `product_question_answered_customer`.
+
+A shop that activated an earlier version gets the messages it lacks on `php Thelia module:refresh`.
 
 ## Back office
 

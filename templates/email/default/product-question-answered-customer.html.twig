@@ -1,0 +1,24 @@
+{# Fed by ProductQuestion\EventListener\ProductQuestionCustomerNotifier: plain values, strings
+   translated there in the language the question was asked in. #}
+{% extends "email-layout.html.twig" %}
+
+{# No big image header #}
+{% block image_header %}{% endblock %}
+
+{% block email_subject %}{{ labels.subject }}{% endblock %}
+
+{% block email_title %}{{ labels.heading }}{% endblock %}
+
+{% block email_content %}
+    <p>{{ labels.intro }}</p>
+
+    {# The customer's own text and the shop's answer: escaped, line breaks kept. #}
+    <blockquote><p>{{ question.content|nl2br }}</p></blockquote>
+
+    <p><strong>{{ labels.answer }}</strong></p>
+    <p>{{ question.answer|nl2br }}</p>
+
+    <p><a href="{{ question.productUrl }}">{{ labels.link }}</a></p>
+
+    <p>{{ labels.outro }}</p>
+{% endblock %}

@@ -13,9 +13,25 @@ declare(strict_types=1);
 
 namespace ProductQuestion\Event;
 
+use ProductQuestion\Model\ProductQuestion;
+
 /**
- * An administrator has just published an answer. The question is on the product page from now on.
+ * The shop has written or rewritten its answer.
+ *
+ * `firstAnswer` tells the two apart: the customer is told once, when their question goes on
+ * the page, not every time a moderator fixes a typo.
  */
 final class ProductQuestionAnsweredEvent extends ProductQuestionEvent
 {
+    public function __construct(
+        ProductQuestion $question,
+        private readonly bool $firstAnswer = true,
+    ) {
+        parent::__construct($question);
+    }
+
+    public function isFirstAnswer(): bool
+    {
+        return $this->firstAnswer;
+    }
 }

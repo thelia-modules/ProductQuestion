@@ -14,12 +14,14 @@ declare(strict_types=1);
 namespace ProductQuestion\Service\Notification;
 
 /**
- * The two things about the shop a notification needs and that only a booted Thelia knows:
- * its language, and the absolute URL of a back-office screen.
+ * What a notification needs to know about the shop and that only a booted Thelia knows: its
+ * language, the absolute URL of a back-office screen, the public URL of a product page.
  */
 interface ShopContextInterface
 {
     public function defaultLocale(): string;
 
     public function adminUrlOfQuestion(int $questionId): string;
+
+    public function productUrl(int $productId, string $locale): string;
 }

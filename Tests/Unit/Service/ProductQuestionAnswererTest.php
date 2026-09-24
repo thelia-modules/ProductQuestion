@@ -99,6 +99,27 @@ final class ProductQuestionAnswererTest extends TestCase
     }
 
     /**
+     * The customer is told once: the event says whether this answer puts the question on the
+     * page or rewrites what is already there.
+     */
+    public function testTheEventTellsAFirstAnswerFromAnEdit(): void
+    {
+        $flags = [];
+        $this->dispatcher->addListener(
+            ProductQuestionAnsweredEvent::class,
+            static function (ProductQuestionAnsweredEvent $event) use (&$flags): void {
+                $flags[] = $event->isFirstAnswer();
+            }
+        );
+
+        $question = $this->pendingQuestion();
+        $this->answerer->answer($question, 'Oui, compatible.', 7);
+        $this->answerer->answer($question, 'Oui, tout a fait compatible.', 7);
+
+        self::assertSame([true, false], $flags);
+    }
+
+    /**
      * A moderator who saves an empty textarea has not answered. Publishing that would put a
      * heading with nothing under it on the product page.
      */

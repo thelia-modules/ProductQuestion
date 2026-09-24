@@ -28,6 +28,7 @@ product page, in the language it was asked in.
 | Front API: `GET /front/product_questions?productId=` and `/{id}` public, `POST /front/account/product_questions` | The list needs a product and shows answered questions only, in the language asked for or the request's; the firewall locks `/front/account` to ROLE_CUSTOMER and the operation says so again. Neither who asked nor who answered is in any payload. |
 | One mail per question to the shop's notification addresses, in the shop's language, always on | Sent by `ProductQuestionNotifier` on `ProductQuestionCreatedEvent` through `MailerFactory::sendEmailToShopManagers()`, so the recipients are the ones the shop already maintains (Configuration > Store information) and a shop with none simply gets nothing, logged. No switch of its own in v1: turning the mail off is emptying that list or editing the message in the back office. The mail never throws: a transport down is the shop's problem, not the customer's. |
 | Message row `product_question_notification_admin`, created by `ProductQuestionMessageInstaller` from `postActivation()` **and** `update()` | Idempotent, so a shop that activated 1.0.0 gets it on `module:refresh` (the version bump to 1.1.0 is what triggers `update()`). The subject holds `{{ question.productTitle }}`, compiled as an inline Twig template by the parser. A subject the shop edits is left alone. |
+| The customer is mailed once, when the shop first publishes its answer, in the language they asked in | `ProductQuestionAnsweredEvent` now says whether it is a first answer or an edit, read off the status before it moves; an edited answer changes the page, not the news. The mail goes out in the question's language rather than the account's, because that is the language the answer is written in — hence `sendEmailMessageOrFail()` with an explicit locale rather than `sendEmailToCustomer()`. A question whose account is gone has nobody to write to. Message `product_question_answered_customer`, same installer, version 1.2.0. |
 | Module stylesheet at `templates/frontOffice/default/assets/product-question.css`, linked by the theme hook via `module_asset()` | The theme's Tailwind scans a closed list of its own directories: a utility class written in a module template is never generated. Geometry lives in the module's own file, type scale and colours are the theme's classes. |
 | No admin API in v1 | Everything goes through the back office. |
 | Admin screens live at `/admin/module/ProductQuestion` | The module has nothing to configure, so the **Configure** button of the module list, which points at that URL, opens the moderation list instead of an empty configuration page. The module route shadows the core `admin.module.configure` route for this one code. |
@@ -48,7 +49,7 @@ stable, and the developer reviewing before the next one starts.
 - [x] **4. Front office** — the ask form, the live component replacing the plain template,
   the API resource for reading and posting, the rate limiter, the module stylesheet.
 - [x] **5. Administrator notification** — the message, its templates, its translations and
-  the listener that sends it.
+  the listener that sends it. Extended with the customer's notification on the first answer.
 - [ ] **6. Close** — README, this file brought up to date, full review of the diff.
 
 ## Traps this module has already walked into
@@ -192,6 +193,15 @@ stable, and the developer reviewing before the next one starts.
   here, for a question asked in fr_FR), the text body, and the HTML body rendered in the
   shop's email layout, link to `/admin/module/ProductQuestion/7` included.
   Setting restored afterwards.
+- Customer notification, over HTTP against the test database (temporary test, deleted
+  afterwards): a customer's API post sends the shop's mail; the shop's first answer through
+  `ProductQuestionAnswerer` sends exactly one more, to the customer's address, whose subject
+  names the product and whose HTML and text bodies carry the question, the answer with its
+  line break and the rewritten product URL; a second answer sends nothing.
+- Customer notification, in the running shop: `module:refresh` after the bump to 1.2.0 created
+  the second message row; answering question 7 (asked in fr_FR by the e2e account) through the
+  back-office form landed in Mailpit as « Notre réponse à votre question sur « Sigmund » »,
+  French body, link to the French product URL — the shop's own language being en_US.
 - Phase 4, in a real browser (Playwright, Chromium, 1440 px, the Chrome extension not being
   connected): a visitor sees the block styled by the module stylesheet; a freshly registered
   customer sees the form, gets a field error on a three-character question, gets the success
@@ -210,8 +220,8 @@ stable, and the developer reviewing before the next one starts.
   stored under the right customer), which is not a permanent test.
 - The live action `ask()` itself is proven in the browser and by reading the template, not by a
   unit test: rendering a live component needs a kernel and a session.
-- `ProductQuestionMessageInstaller` and `TheliaShopContext` have no unit test: both are Propel
-  and singletons. The installer is proven by the row `module:refresh` created; the context by
+- `ProductQuestionMessageInstaller`, `TheliaShopContext` and `TheliaCustomerMailer` have no unit
+  test: all three are Propel and singletons. The installer is proven by the row `module:refresh` created; the context by
   the link in the mail Mailpit received.
 - The mail was looked at in the shop's default language only (en_US in this install); the
   French strings are proven by the fr_FR title and subject of the message row, not by a mail.

@@ -20,7 +20,9 @@ use ProductQuestion\Repository\ProductTitleRepository;
 use ProductQuestion\Repository\ProductTitleSourceInterface;
 use ProductQuestion\Service\Front\CurrentCustomerInterface;
 use ProductQuestion\Service\Front\SecurityContextCurrentCustomer;
+use ProductQuestion\Service\Notification\CustomerMailerInterface;
 use ProductQuestion\Service\Notification\ShopContextInterface;
+use ProductQuestion\Service\Notification\TheliaCustomerMailer;
 use ProductQuestion\Service\Notification\TheliaShopContext;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -56,6 +58,12 @@ final class ProductQuestion extends BaseModule
      * the message table, created by ProductQuestionMessageInstaller.
      */
     public const MESSAGE_ADMIN_NOTIFICATION = 'product_question_notification_admin';
+
+    /**
+     * The message sent to the customer when the shop first answers their question, in the
+     * language they asked in.
+     */
+    public const MESSAGE_CUSTOMER_ANSWERED = 'product_question_answered_customer';
 
     /**
      * Where the moderation list lives: the URL the module list's Configure button points at.
@@ -133,5 +141,6 @@ final class ProductQuestion extends BaseModule
         $servicesConfigurator->alias(ProductTitleSourceInterface::class, ProductTitleRepository::class);
         $servicesConfigurator->alias(CurrentCustomerInterface::class, SecurityContextCurrentCustomer::class);
         $servicesConfigurator->alias(ShopContextInterface::class, TheliaShopContext::class);
+        $servicesConfigurator->alias(CustomerMailerInterface::class, TheliaCustomerMailer::class);
     }
 }

@@ -30,4 +30,9 @@ final class FixedShopContext implements ShopContextInterface
     {
         return 'https://shop.test/admin/module/ProductQuestion/'.$questionId;
     }
+
+    public function productUrl(int $productId, string $locale): string
+    {
+        return 'https://shop.test/'.$locale.'/product-'.$productId.'.html';
+    }
 }

@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace ProductQuestion\Tests\Unit\Template;
 
 use PHPUnit\Framework\TestCase;
+use ProductQuestion\Service\Notification\ProductQuestionAnswerNotification;
 use ProductQuestion\Service\Notification\ProductQuestionNotification;
 use ProductQuestion\Tests\Double\FixedTranslator;
 use Twig\Environment;
@@ -25,7 +26,8 @@ use Twig\Loader\FilesystemLoader;
  * The two mail templates, rendered with the parameters the listener really hands over.
  *
  * The shop's email layout is stood in for by a stub that yields the blocks the templates
- * fill: what is asserted is the module's own markup, and that a customer's text is escaped.
+ * fill: what is asserted is the module's own markup, and that a customer's text is escaped in
+ * the HTML part and left as typed in the text part — which is what escaping by file name does.
  */
 final class ProductQuestionEmailTemplatesTest extends TestCase
 {
@@ -36,7 +38,7 @@ final class ProductQuestionEmailTemplatesTest extends TestCase
         ]);
         $module = new FilesystemLoader(\dirname(__DIR__, 3).'/templates/email/default');
 
-        return new Environment(new ChainLoader([$layout, $module]), ['autoescape' => 'html', 'strict_variables' => true]);
+        return new Environment(new ChainLoader([$layout, $module]), ['autoescape' => 'name', 'strict_variables' => true]);
     }
 
     /**
@@ -56,6 +58,21 @@ final class ProductQuestionEmailTemplatesTest extends TestCase
         self::assertStringContainsString('&lt;script&gt;', $html);
         self::assertStringNotContainsString('<script>', $html);
         self::assertStringContainsString('<a href="https://shop.test/admin/module/ProductQuestion/5">', $html);
+    }
+
+    public function testTheCustomerMailCarriesTheAnswerAndTheProductPageAndEscapesBothTexts(): void
+    {
+        $parameters = (new ProductQuestionAnswerNotification(new FixedTranslator()))->parameters(5, '<b>Q</b> ?', "Oui,\n<i>compatible</i>.", 'Horatio', 'https://shop.test/horatio-1.html', 'fr_FR');
+
+        $html = $this->twig()->render('product-question-answered-customer.html.twig', $parameters);
+        $text = $this->twig()->render('product-question-answered-customer.txt.twig', $parameters);
+
+        self::assertStringContainsString('&lt;b&gt;Q&lt;/b&gt; ?', $html);
+        self::assertStringContainsString('Oui,<br />', $html);
+        self::assertStringContainsString('&lt;i&gt;compatible&lt;/i&gt;.', $html);
+        self::assertStringContainsString('<a href="https://shop.test/horatio-1.html">', $html);
+        self::assertStringContainsString('<i>compatible</i>.', $text);
+        self::assertStringContainsString('See it on the product page: %url', $text);
     }
 
     public function testTheTextMailCarriesTheQuestionAndTheUrl(): void
