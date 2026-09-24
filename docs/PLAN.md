@@ -50,7 +50,9 @@ stable, and the developer reviewing before the next one starts.
   the API resource for reading and posting, the rate limiter, the module stylesheet.
 - [x] **5. Administrator notification** — the message, its templates, its translations and
   the listener that sends it. Extended with the customer's notification on the first answer.
-- [ ] **6. Close** — README, this file brought up to date, full review of the diff.
+- [ ] **6. Close** — README, this file brought up to date, full review of the diff. The review
+  is done and written up in `docs/REVIEW-2026-09-24.md` (1 blocking, 8 important, 14
+  suggestions); what to fix is the open decision.
 
 ## Traps this module has already walked into
 
