@@ -24,6 +24,7 @@ product page, in the language it was asked in.
 | Top-level menu entry, right after Option | `main.in-top-menu-items`, position 4. The side nav folds every section's sub-entries behind a click, so an entry filed under Customers was invisible until that section was opened: the developer asked for it at the first level, after the content blocks and the Options entry. |
 | Front office shows the visitor's locale only | A question asked in French is answered in French. |
 | No admin API in v1 | Everything goes through the back office. |
+| Admin screens live at `/admin/module/ProductQuestion` | The module has nothing to configure, so the **Configure** button of the module list, which points at that URL, opens the moderation list instead of an empty configuration page. The module route shadows the core `admin.module.configure` route for this one code. |
 
 ## Phases
 

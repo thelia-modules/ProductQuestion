@@ -55,7 +55,7 @@ class ProductQuestionController extends BaseAdminController
     ) {
     }
 
-    #[Route('/product-questions', name: '_list', methods: ['GET'])]
+    #[Route('/ProductQuestion', name: '_list', methods: ['GET'])]
     public function listAction(Request $request): Response
     {
         if (null !== $denied = $this->checkModuleAccess(AccessManager::VIEW)) {
@@ -70,7 +70,7 @@ class ProductQuestionController extends BaseAdminController
         );
     }
 
-    #[Route('/product-question/{id}', name: '_edit', requirements: ['id' => '\d+'], methods: ['GET'])]
+    #[Route('/ProductQuestion/{id}', name: '_edit', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function editAction(Request $request, int $id): Response
     {
         if (null !== $denied = $this->checkModuleAccess(AccessManager::VIEW)) {
@@ -115,7 +115,7 @@ class ProductQuestionController extends BaseAdminController
         ]);
     }
 
-    #[Route('/product-question/{id}/answer', name: '_answer', requirements: ['id' => '\d+'], methods: ['POST'])]
+    #[Route('/ProductQuestion/{id}/answer', name: '_answer', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function answerAction(Request $request, int $id): Response
     {
         if (null !== $denied = $this->checkModuleAccess(AccessManager::UPDATE)) {
@@ -150,7 +150,7 @@ class ProductQuestionController extends BaseAdminController
         return $this->backToQuestion($id);
     }
 
-    #[Route('/product-question/{id}/refuse', name: '_refuse', requirements: ['id' => '\d+'], methods: ['POST'])]
+    #[Route('/ProductQuestion/{id}/refuse', name: '_refuse', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function refuseAction(Request $request, int $id): Response
     {
         if (null !== $denied = $this->checkModuleAccess(AccessManager::UPDATE)) {
@@ -170,7 +170,7 @@ class ProductQuestionController extends BaseAdminController
         return $this->backToQuestion($id);
     }
 
-    #[Route('/product-question/{id}/delete', name: '_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
+    #[Route('/ProductQuestion/{id}/delete', name: '_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function deleteAction(Request $request, int $id): Response
     {
         if (null !== $denied = $this->checkModuleAccess(AccessManager::DELETE)) {
@@ -230,6 +230,6 @@ class ProductQuestionController extends BaseAdminController
 
     private function backToQuestion(int $id): RedirectResponse
     {
-        return new RedirectResponse(URL::getInstance()->absoluteUrl('/admin/module/product-question/'.$id));
+        return new RedirectResponse(URL::getInstance()->absoluteUrl('/admin/module/ProductQuestion/'.$id));
     }
 }

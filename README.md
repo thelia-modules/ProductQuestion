@@ -54,7 +54,8 @@ after the entries of the Page, TheliaBlocks and Option modules. It is contribute
 container is compiled, so the entry appears once the cache has been rebuilt with the module
 active.
 
-The entry opens the moderation list, at `/admin/module/product-questions`. It has one tab per
+The entry opens the moderation list, at `/admin/module/ProductQuestion`, which is also where the
+**Configure** button of the module list leads. It has one tab per
 status with a count, filters on language, product, customer and sort order, and pagination.
 Opening a question shows it in full, links to the customer record and to the product, and
 carries the textarea the shop answers with. Publishing an answer puts the question on the
