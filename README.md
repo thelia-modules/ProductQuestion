@@ -66,6 +66,17 @@ For a front office that talks to the API rather than to Twig:
 
 Neither the customer who asked nor the administrator who answered is in any payload.
 
+## Notification
+
+Every new question sends one mail to the shop's notification addresses (Configuration > Store
+information), in the shop's language: who asked, about which product, the text, and a link to
+the moderation screen. The message is `product_question_notification_admin`, editable like any
+other in Configuration > Mailing templates; its templates live in `templates/email/default/`.
+A shop with no notification address gets no mail and one line in the Thelia log; the question
+is stored either way.
+
+A shop that activated version 1.0.0 gets the message on `php Thelia module:refresh`.
+
 ## Back office
 
 The module adds a **Customer questions** entry at the first level of the side navigation,

@@ -1,0 +1,22 @@
+{# Fed by ProductQuestion\EventListener\ProductQuestionNotifier: the question travels in the
+   message parameters as plain values, and every string is translated there — Twig's |trans
+   does not reach a module's catalogue from here. #}
+{% extends "email-layout.html.twig" %}
+
+{# No big image header #}
+{% block image_header %}{% endblock %}
+
+{% block email_subject %}{{ labels.subject }}{% endblock %}
+
+{% block email_title %}{{ labels.heading }}{% endblock %}
+
+{% block email_content %}
+    <p>{{ labels.intro }}</p>
+
+    {# Customer-written text: Twig escapes it, nl2br keeps the author's line breaks. #}
+    <blockquote><p>{{ question.content|nl2br }}</p></blockquote>
+
+    <p><a href="{{ question.adminUrl }}">{{ labels.link }}</a></p>
+
+    <p>{{ labels.outro }}</p>
+{% endblock %}

@@ -13,12 +13,15 @@ declare(strict_types=1);
 
 namespace ProductQuestion;
 
+use ProductQuestion\Install\ProductQuestionMessageInstaller;
 use ProductQuestion\Repository\ProductQuestionRepository;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
 use ProductQuestion\Repository\ProductTitleRepository;
 use ProductQuestion\Repository\ProductTitleSourceInterface;
 use ProductQuestion\Service\Front\CurrentCustomerInterface;
 use ProductQuestion\Service\Front\SecurityContextCurrentCustomer;
+use ProductQuestion\Service\Notification\ShopContextInterface;
+use ProductQuestion\Service\Notification\TheliaShopContext;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
@@ -43,6 +46,18 @@ final class ProductQuestion extends BaseModule
     public const MESSAGE_DOMAIN_BO = 'productquestion.bo.default-twig';
 
     /**
+     * Email strings, from I18n/email/default/{locale}.php: same rule as the back-office
+     * domain, the suffix is the name of the directory under templates/email.
+     */
+    public const MESSAGE_DOMAIN_EMAIL = 'productquestion.email.default';
+
+    /**
+     * The message sent to the shop's notification addresses when a customer asks. A row of
+     * the message table, created by ProductQuestionMessageInstaller.
+     */
+    public const MESSAGE_ADMIN_NOTIFICATION = 'product_question_notification_admin';
+
+    /**
      * Where the moderation list lives: the URL the module list's Configure button points at.
      *
      * The controller redirects to it after a write, as a plain URL rather than a route name,
@@ -54,13 +69,20 @@ final class ProductQuestion extends BaseModule
     {
         // Thelia stores module configuration as strings, and TheliaMain.sql drops the table
         // before creating it: replaying it on an upgrade would take every question with it.
-        if ('1' === self::getConfigValue('is_initialized', '0')) {
-            return;
+        if ('1' !== self::getConfigValue('is_initialized', '0')) {
+            (new Database($con))->insertSql(null, [__DIR__.DS.'Config'.DS.'TheliaMain.sql']);
+
+            self::setConfigValue('is_initialized', '1');
         }
 
-        (new Database($con))->insertSql(null, [__DIR__.DS.'Config'.DS.'TheliaMain.sql']);
+        // Outside the guard: idempotent, and a shop that activated a version without the mail
+        // gets the message on the next activation as well as on update().
+        (new ProductQuestionMessageInstaller())->install();
+    }
 
-        self::setConfigValue('is_initialized', '1');
+    public function update($currentVersion, $newVersion, ?ConnectionInterface $con = null): void
+    {
+        (new ProductQuestionMessageInstaller())->install();
     }
 
     /**
@@ -110,5 +132,6 @@ final class ProductQuestion extends BaseModule
         $servicesConfigurator->alias(ProductQuestionStorageInterface::class, ProductQuestionRepository::class);
         $servicesConfigurator->alias(ProductTitleSourceInterface::class, ProductTitleRepository::class);
         $servicesConfigurator->alias(CurrentCustomerInterface::class, SecurityContextCurrentCustomer::class);
+        $servicesConfigurator->alias(ShopContextInterface::class, TheliaShopContext::class);
     }
 }

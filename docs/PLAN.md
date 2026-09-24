@@ -26,6 +26,8 @@ product page, in the language it was asked in.
 | Front block is a Symfony UX live component, posting through `ProductQuestionAsker` | The norm of the Flexy theme (cart, addresses, Comment): no fetch, no controller. The component is the door the theme uses; the API is the door a headless front uses; both go through the same service. |
 | Rate limits: 10 questions per customer per hour, 3 per customer and product | Sliding windows declared by the module in `configureContainer()`, keyed on the account — only a signed-in customer reaches the ask. The API and the component spend the same budgets, before anything is read. |
 | Front API: `GET /front/product_questions?productId=` and `/{id}` public, `POST /front/account/product_questions` | The list needs a product and shows answered questions only, in the language asked for or the request's; the firewall locks `/front/account` to ROLE_CUSTOMER and the operation says so again. Neither who asked nor who answered is in any payload. |
+| One mail per question to the shop's notification addresses, in the shop's language, always on | Sent by `ProductQuestionNotifier` on `ProductQuestionCreatedEvent` through `MailerFactory::sendEmailToShopManagers()`, so the recipients are the ones the shop already maintains (Configuration > Store information) and a shop with none simply gets nothing, logged. No switch of its own in v1: turning the mail off is emptying that list or editing the message in the back office. The mail never throws: a transport down is the shop's problem, not the customer's. |
+| Message row `product_question_notification_admin`, created by `ProductQuestionMessageInstaller` from `postActivation()` **and** `update()` | Idempotent, so a shop that activated 1.0.0 gets it on `module:refresh` (the version bump to 1.1.0 is what triggers `update()`). The subject holds `{{ question.productTitle }}`, compiled as an inline Twig template by the parser. A subject the shop edits is left alone. |
 | Module stylesheet at `templates/frontOffice/default/assets/product-question.css`, linked by the theme hook via `module_asset()` | The theme's Tailwind scans a closed list of its own directories: a utility class written in a module template is never generated. Geometry lives in the module's own file, type scale and colours are the theme's classes. |
 | No admin API in v1 | Everything goes through the back office. |
 | Admin screens live at `/admin/module/ProductQuestion` | The module has nothing to configure, so the **Configure** button of the module list, which points at that URL, opens the moderation list instead of an empty configuration page. The module route shadows the core `admin.module.configure` route for this one code. |
@@ -45,7 +47,7 @@ stable, and the developer reviewing before the next one starts.
   French and English strings.
 - [x] **4. Front office** — the ask form, the live component replacing the plain template,
   the API resource for reading and posting, the rate limiter, the module stylesheet.
-- [ ] **5. Administrator notification** — the message, its templates, its translations and
+- [x] **5. Administrator notification** — the message, its templates, its translations and
   the listener that sends it.
 - [ ] **6. Close** — README, this file brought up to date, full review of the diff.
 
@@ -130,6 +132,20 @@ stable, and the developer reviewing before the next one starts.
   Comment does it.
 - Null properties are left out of API payloads by the serializer configuration: a client reading
   a freshly posted question gets no `answer` key rather than `"answer": null`.
+- `ConfigQuery` serves a snapshot of the whole config table, warmed once per process and kept in
+  a cache across processes: a value changed by SQL is not seen until `cache:clear`. Writing
+  through `ConfigQuery::write()` updates the snapshot; the back office does. The first dev proof
+  of the mail failed on "no shop notification recipient" for that reason alone.
+- `sendEmailToShopManagers()` needs both `store_email` (the sender) and a non-empty
+  `store_notification_emails` (the recipients). The test database has neither: a mail proof
+  there has to write both first. Each miss is one Tlog line in `var/log/log-thelia.txt`, and
+  nothing in Monolog.
+- `postActivation()` and `update()` run before the module catalogues are registered: the email
+  strings are `addResource()`d by hand before the message title and subject are written,
+  otherwise the row stores the keys. A language with no file under `I18n/email/default` gets the
+  English key, which is what the six other demo languages show.
+- Symfony-style events: the module dispatches `new ProductQuestionCreatedEvent($question)` with
+  no name, so a subscriber lists the class name as the event.
 
 ## Standing outside this module
 
@@ -165,6 +181,17 @@ stable, and the developer reviewing before the next one starts.
   id, lists it with its answer once the shop has answered, refuses a list without a product
   with 400, refuses a too-short text with 422 without spending a rate-limit token, and answers
   429 on the fourth post about one product.
+- Phase 5, over HTTP against the test database (temporary test, deleted afterwards): with a
+  store email and one notification address written first, a customer's API post sends exactly
+  one mail to that address, whose subject names the product, whose HTML and text bodies carry
+  the question, the customer's name and the link to the moderation screen; with no notification
+  address, the post still answers 201 and no mail leaves.
+- Phase 5, in the running shop: `module:refresh` after the version bump created the message row
+  in the eight demo languages; with a notification address set (and the cache cleared), a post
+  through the API landed in Mailpit with the subject and body in the shop's language (en_US
+  here, for a question asked in fr_FR), the text body, and the HTML body rendered in the
+  shop's email layout, link to `/admin/module/ProductQuestion/7` included.
+  Setting restored afterwards.
 - Phase 4, in a real browser (Playwright, Chromium, 1440 px, the Chrome extension not being
   connected): a visitor sees the block styled by the module stylesheet; a freshly registered
   customer sees the form, gets a field error on a three-character question, gets the success
@@ -183,6 +210,11 @@ stable, and the developer reviewing before the next one starts.
   stored under the right customer), which is not a permanent test.
 - The live action `ask()` itself is proven in the browser and by reading the template, not by a
   unit test: rendering a live component needs a kernel and a session.
+- `ProductQuestionMessageInstaller` and `TheliaShopContext` have no unit test: both are Propel
+  and singletons. The installer is proven by the row `module:refresh` created; the context by
+  the link in the mail Mailpit received.
+- The mail was looked at in the shop's default language only (en_US in this install); the
+  French strings are proven by the fr_FR title and subject of the message row, not by a mail.
 - The back-office screens have no permanent regression test. The proofs above ran from a
   temporary test inside the Thelia repository, which was deleted afterwards: the module's own
   suite boots no kernel, so it cannot hold them. Giving the module a second, kernel-backed
