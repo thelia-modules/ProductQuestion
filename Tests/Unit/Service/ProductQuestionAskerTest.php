@@ -20,6 +20,7 @@ use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Service\Front\ProductQuestionTextSanitizer;
 use ProductQuestion\Service\ProductQuestionAsker;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionStorage;
+use ProductQuestion\Tests\Double\InMemoryProductVisibility;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
 final class ProductQuestionAskerTest extends TestCase
@@ -38,6 +39,7 @@ final class ProductQuestionAskerTest extends TestCase
             $this->storage,
             new ProductQuestionTextSanitizer(),
             $this->dispatcher,
+            new InMemoryProductVisibility([12]),
         );
     }
 
@@ -95,6 +97,24 @@ final class ProductQuestionAskerTest extends TestCase
         $this->expectException(InvalidProductQuestionException::class);
 
         $this->asker->ask(0, 34, 'fr_FR', 'Une question valable ?');
+    }
+
+    /**
+     * The foreign key would refuse the row anyway, but as a 500 carrying the INSERT. A product
+     * the shop keeps offline is refused the same way: nobody can see its page to ask about it,
+     * and the shop must not be mailed about a draft.
+     */
+    public function testAQuestionAboutAProductNobodyCanSeeIsRefused(): void
+    {
+        foreach ([13, 999999] as $productId) {
+            try {
+                $this->asker->ask($productId, 34, 'fr_FR', 'Une question valable ?');
+                self::fail('A question about an unknown or hidden product has to be refused');
+            } catch (InvalidProductQuestionException) {
+            }
+        }
+
+        self::assertSame([], $this->storage->saved);
     }
 
     public function testAQuestionWithoutALanguageIsRefused(): void

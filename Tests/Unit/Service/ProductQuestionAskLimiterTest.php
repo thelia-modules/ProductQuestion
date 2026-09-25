@@ -16,14 +16,34 @@ namespace ProductQuestion\Tests\Unit\Service;
 use PHPUnit\Framework\TestCase;
 use ProductQuestion\Service\Front\ProductQuestionAskLimiter;
 use ProductQuestion\Tests\Double\RateLimiters;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 final class ProductQuestionAskLimiterTest extends TestCase
 {
-    private function limiter(int $perCustomer, int $perProduct): ProductQuestionAskLimiter
+    private RequestStack $requestStack;
+
+    protected function setUp(): void
+    {
+        $this->requestStack = new RequestStack();
+        $this->from('203.0.113.7');
+    }
+
+    private function from(string $ip): void
+    {
+        while (null !== $this->requestStack->pop()) {
+        }
+
+        $this->requestStack->push(Request::create('/', 'POST', server: ['REMOTE_ADDR' => $ip]));
+    }
+
+    private function limiter(int $perCustomer, int $perProduct, int $perIp = 100): ProductQuestionAskLimiter
     {
         return new ProductQuestionAskLimiter(
             RateLimiters::slidingWindow('per_customer', $perCustomer),
             RateLimiters::slidingWindow('per_product', $perProduct),
+            RateLimiters::slidingWindow('per_ip', $perIp),
+            $this->requestStack,
         );
     }
 
@@ -56,5 +76,22 @@ final class ProductQuestionAskLimiterTest extends TestCase
 
         // Another customer is unaffected.
         self::assertTrue($limiter->allows(2, 4));
+    }
+
+    /**
+     * Registration is open, so the account budgets alone let N accounts send N times as many
+     * questions, and as many mails to the shop. The address caps them together.
+     */
+    public function testAccountsSharingAnAddressShareItsBudget(): void
+    {
+        $limiter = $this->limiter(perCustomer: 10, perProduct: 10, perIp: 2);
+
+        self::assertTrue($limiter->allows(1, 12));
+        self::assertTrue($limiter->allows(2, 12));
+        self::assertFalse($limiter->allows(3, 12));
+
+        // Another address has a budget of its own.
+        $this->from('198.51.100.4');
+        self::assertTrue($limiter->allows(3, 12));
     }
 }

@@ -14,9 +14,10 @@ declare(strict_types=1);
 namespace ProductQuestion\EventListener;
 
 use ProductQuestion\Event\ProductQuestionCreatedEvent;
-use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\ProductQuestion as ProductQuestionModule;
 use ProductQuestion\Repository\ProductTitleSourceInterface;
+use ProductQuestion\Service\CustomerDisplayName;
+use ProductQuestion\Service\Notification\MailFailure;
 use ProductQuestion\Service\Notification\ProductQuestionNotification;
 use ProductQuestion\Service\Notification\ShopContextInterface;
 use Psr\Log\LoggerInterface;
@@ -71,27 +72,14 @@ final readonly class ProductQuestionNotifier implements EventSubscriberInterface
                     $questionId,
                     (string) $question->getContent(),
                     (string) $question->getLocale(),
-                    self::customerName($question),
+                    CustomerDisplayName::of($question),
                     $this->productTitles->titleFor((int) $question->getProductId(), $shopLocale),
                     $this->shop->adminUrlOfQuestion($questionId),
                     $shopLocale,
                 ),
             );
         } catch (\Throwable $exception) {
-            $this->logger->error(\sprintf('ProductQuestion: the shop could not be told about question %d: %s', $questionId, $exception->getMessage()));
+            $this->logger->error(\sprintf('ProductQuestion: the shop could not be told about question %d: %s', $questionId, MailFailure::describe($exception)));
         }
-    }
-
-    private static function customerName(ProductQuestion $question): ?string
-    {
-        $customer = $question->getCustomer();
-
-        if (null === $customer) {
-            return null;
-        }
-
-        $name = trim(($customer->getFirstname() ?? '').' '.($customer->getLastname() ?? ''));
-
-        return '' === $name ? $customer->getEmail() : $name;
     }
 }

@@ -37,16 +37,28 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
      */
     public function findAnsweredForProduct(int $productId, string $locale): array
     {
-        return ProductQuestionQuery::create()
-            ->filterByProductId($productId)
-            ->filterByStatus(ProductQuestionStatus::Answered->value)
-            ->filterByLocale($locale)
-            // An answer edited later moves up: what the shop last said about the product is
-            // what a visitor reads first.
-            ->orderByAnsweredAt(Criteria::DESC)
-            ->orderById(Criteria::DESC)
+        return $this->answeredForProduct($productId, $locale)
             ->find()
             ->getData();
+    }
+
+    /**
+     * @return array{items: list<ProductQuestion>, total: int}
+     */
+    public function findAnsweredForProductPage(int $productId, string $locale, int $offset, int $limit): array
+    {
+        $query = $this->answeredForProduct($productId, $locale);
+
+        // Counted on a copy, as in searchForModeration().
+        $total = (clone $query)->count();
+
+        $items = $query
+            ->offset($offset)
+            ->limit($limit)
+            ->find()
+            ->getData();
+
+        return ['items' => $items, 'total' => $total];
     }
 
     /**
@@ -153,6 +165,18 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
         }
 
         return array_values(array_unique($locales));
+    }
+
+    private function answeredForProduct(int $productId, string $locale): ProductQuestionQuery
+    {
+        return ProductQuestionQuery::create()
+            ->filterByProductId($productId)
+            ->filterByStatus(ProductQuestionStatus::Answered->value)
+            ->filterByLocale($locale)
+            // An answer edited later moves up: what the shop last said about the product is
+            // what a visitor reads first.
+            ->orderByAnsweredAt(Criteria::DESC)
+            ->orderById(Criteria::DESC);
     }
 
     public function save(ProductQuestion $question): void

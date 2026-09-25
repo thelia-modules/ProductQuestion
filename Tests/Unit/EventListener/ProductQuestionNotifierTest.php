@@ -102,6 +102,32 @@ final class ProductQuestionNotifierTest extends TestCase
         self::assertStringContainsString('no transport', $logger->records[0]['message']);
     }
 
+    /**
+     * Same rule as the customer's mail: the reason is kept, the addresses are not.
+     */
+    public function testTheLoggedFailureCarriesNoAddress(): void
+    {
+        $mailer = $this->createMock(MailerFactory::class);
+        $mailer->method('sendEmailToShopManagers')->willThrowException(
+            new \RuntimeException('Email "shop manager@example" does not comply with addr-spec of RFC 2822; sent to orders@shop.example.com.')
+        );
+        $logger = new SpyLogger();
+
+        $notifier = new ProductQuestionNotifier(
+            $mailer,
+            new ProductQuestionNotification(new FixedTranslator()),
+            new InMemoryProductTitles([]),
+            new FixedShopContext(),
+            $logger,
+        );
+
+        $notifier->onQuestionCreated(new ProductQuestionCreatedEvent($this->question()));
+
+        self::assertStringContainsString('does not comply with addr-spec', $logger->records[0]['message']);
+        self::assertStringNotContainsString('orders@shop.example.com', $logger->records[0]['message']);
+        self::assertStringNotContainsString('manager@example', $logger->records[0]['message']);
+    }
+
     public function testTheListenerIsWiredOnTheCreatedEvent(): void
     {
         $mailer = $this->createMock(MailerFactory::class);

@@ -104,4 +104,22 @@ final class ProductQuestionCustomerNotifierTest extends TestCase
         self::assertStringContainsString('question 5', $logger->records[0]['message']);
         self::assertStringContainsString('no transport', $logger->records[0]['message']);
     }
+
+    /**
+     * An SMTP refusal quotes the dialogue with the server, recipient included: the log keeps the
+     * reason and loses the customer's address.
+     */
+    public function testTheLoggedFailureCarriesNoAddress(): void
+    {
+        $logger = new SpyLogger();
+        $refusal = new \RuntimeException('Expected response code "250" but got code "550", with message "550 5.1.1 <ada.lovelace@example.com>: Recipient address rejected".');
+
+        $this->notifier(new SpyCustomerMailer($refusal), $logger)
+            ->onQuestionAnswered(new ProductQuestionAnsweredEvent($this->question(), true));
+
+        self::assertCount(1, $logger->records);
+        self::assertStringContainsString('Recipient address rejected', $logger->records[0]['message']);
+        self::assertStringNotContainsString('ada.lovelace', $logger->records[0]['message']);
+        self::assertStringNotContainsString('@example.com', $logger->records[0]['message']);
+    }
 }

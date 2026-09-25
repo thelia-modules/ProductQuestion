@@ -22,6 +22,10 @@ composer require thelia/product-question-module
 Manually, copy the module into `<thelia_root>/local/modules/` under the name `ProductQuestion`,
 then activate it in the back office.
 
+Deleting the module keeps the questions unless the shop asks to delete the module's data too;
+in that case the table and the two mail messages go with it. Reinstalling after a deletion
+that kept the data finds the questions where they were.
+
 ## Data
 
 One table, `product_question`. A question belongs to one product and, while the account
@@ -51,8 +55,9 @@ appears once the shop has answered it.
 The block carries its own stylesheet, `templates/frontOffice/default/assets/product-question.css`,
 linked by the hook through `module_asset()`. Type scale and colours are the theme's classes.
 
-Two budgets guard the ask, declared by the module itself: ten questions per customer per hour,
-three per customer and product.
+Three budgets guard the ask, declared by the module itself: twenty questions per address per
+hour, ten per customer, three per customer and product. A question that fails validation spends
+none of them.
 
 ## Front API
 
@@ -60,9 +65,9 @@ For a front office that talks to the API rather than to Twig:
 
 | Operation | Who | What |
 |---|---|---|
-| `GET /api/front/product_questions?productId=&locale=` | anyone | The answered questions of one product, in one language (the request's when `locale` is absent). Paginated. |
+| `GET /api/front/product_questions?productId=&locale=` | anyone | The answered questions of one product, in one language (the request's when `locale` is absent). Paginated (`page`, `itemsPerPage`, at most 100). A parameter given as an array is a 400. |
 | `GET /api/front/product_questions/{id}` | anyone | One answered question. A pending or refused one is a 404. |
-| `POST /api/front/account/product_questions` | a signed-in customer (JWT) | `{"productId": 12, "content": "…", "locale": "fr_FR"}`. Answers 201 with `published: false`, 422 on an invalid text, 429 past the budgets. |
+| `POST /api/front/account/product_questions` | a signed-in customer (JWT) | `{"productId": 12, "content": "…", "locale": "fr_FR"}`. Answers 201 with `published: false`, 422 on an invalid text or on a product that does not exist or is offline, 429 past the budgets. |
 
 Neither the customer who asked nor the administrator who answered is in any payload.
 

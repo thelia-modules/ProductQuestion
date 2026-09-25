@@ -17,6 +17,7 @@ use ProductQuestion\Event\ProductQuestionAnsweredEvent;
 use ProductQuestion\ProductQuestion as ProductQuestionModule;
 use ProductQuestion\Repository\ProductTitleSourceInterface;
 use ProductQuestion\Service\Notification\CustomerMailerInterface;
+use ProductQuestion\Service\Notification\MailFailure;
 use ProductQuestion\Service\Notification\ProductQuestionAnswerNotification;
 use ProductQuestion\Service\Notification\ShopContextInterface;
 use Psr\Log\LoggerInterface;
@@ -82,7 +83,7 @@ final readonly class ProductQuestionCustomerNotifier implements EventSubscriberI
                 ),
             );
         } catch (\Throwable $exception) {
-            $this->logger->error(\sprintf('ProductQuestion: the customer could not be told about the answer to question %d: %s', $questionId, $exception->getMessage()));
+            $this->logger->error(\sprintf('ProductQuestion: the customer could not be told about the answer to question %d: %s', $questionId, MailFailure::describe($exception)));
         }
     }
 }

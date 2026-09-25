@@ -68,13 +68,13 @@ final readonly class ProductQuestionProvider implements ProviderInterface
      */
     private function collection(array $filters): TraversablePaginator
     {
-        $productId = (int) ($filters['productId'] ?? 0);
+        $productId = (int) (self::scalar($filters, 'productId') ?? 0);
 
         if ($productId < 1) {
             throw new BadRequestHttpException('The "productId" query parameter is required: the list is the questions of one product.');
         }
 
-        $locale = trim((string) ($filters['locale'] ?? ''));
+        $locale = trim(self::scalar($filters, 'locale') ?? '');
 
         if ('' === $locale) {
             $locale = $this->requestStack->getCurrentRequest()?->getLocale() ?? '';
@@ -84,25 +84,43 @@ final readonly class ProductQuestionProvider implements ProviderInterface
             throw new BadRequestHttpException('The "locale" query parameter is required: a question is shown in the language it was asked in.');
         }
 
-        $page = max(1, (int) ($filters['page'] ?? 1));
-        $itemsPerPage = (int) ($filters['itemsPerPage'] ?? self::DEFAULT_ITEMS_PER_PAGE);
+        $page = max(1, (int) (self::scalar($filters, 'page') ?? 1));
+        $itemsPerPage = (int) (self::scalar($filters, 'itemsPerPage') ?? self::DEFAULT_ITEMS_PER_PAGE);
         $itemsPerPage = min(self::MAX_ITEMS_PER_PAGE, max(1, $itemsPerPage));
 
-        // The storage answers the whole answered list of one product in one language, which
-        // is what a product page shows; the page is cut here.
-        $all = $this->storage->findAnsweredForProduct($productId, $locale);
-        $slice = \array_slice($all, ($page - 1) * $itemsPerPage, $itemsPerPage);
+        $slice = $this->storage->findAnsweredForProductPage($productId, $locale, ($page - 1) * $itemsPerPage, $itemsPerPage);
 
         $questions = array_map(
             fn (ProductQuestion $question): ProductQuestionResource => $this->mapper->toResource($question),
-            $slice,
+            $slice['items'],
         );
 
         return new TraversablePaginator(
             new \ArrayIterator($questions),
             $page,
             $itemsPerPage,
-            \count($all),
+            $slice['total'],
         );
+    }
+
+    /**
+     * The filters come from parse_str, where `?locale[]=x` is an array: cast as it stands, that
+     * is a warning turned 500, or a product id read off an array.
+     *
+     * @param array<string, mixed> $filters
+     */
+    private static function scalar(array $filters, string $key): ?string
+    {
+        $value = $filters[$key] ?? null;
+
+        if (null === $value) {
+            return null;
+        }
+
+        if (!\is_scalar($value)) {
+            throw new BadRequestHttpException(\sprintf('The "%s" query parameter must be a single value.', $key));
+        }
+
+        return (string) $value;
     }
 }

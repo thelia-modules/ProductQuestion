@@ -35,4 +35,14 @@ final class FixedShopContext implements ShopContextInterface
     {
         return 'https://shop.test/'.$locale.'/product-'.$productId.'.html';
     }
+
+    public function customerAdminUrl(int $customerId): string
+    {
+        return 'https://shop.test/admin/customer/update?customer_id='.$customerId;
+    }
+
+    public function productAdminUrl(int $productId): string
+    {
+        return 'https://shop.test/admin/products/update?product_id='.$productId;
+    }
 }

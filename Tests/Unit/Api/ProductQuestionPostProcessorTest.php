@@ -24,6 +24,7 @@ use ProductQuestion\Service\Front\ProductQuestionTextSanitizer;
 use ProductQuestion\Service\ProductQuestionAsker;
 use ProductQuestion\Tests\Double\FixedCurrentCustomer;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionStorage;
+use ProductQuestion\Tests\Double\InMemoryProductVisibility;
 use ProductQuestion\Tests\Double\RateLimiters;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
@@ -56,10 +57,12 @@ final class ProductQuestionPostProcessorTest extends TestCase
         $requestStack->push($request);
 
         return new ProductQuestionPostProcessor(
-            new ProductQuestionAsker($this->storage, new ProductQuestionTextSanitizer(), new EventDispatcher()),
+            new ProductQuestionAsker($this->storage, new ProductQuestionTextSanitizer(), new EventDispatcher(), new InMemoryProductVisibility([12])),
             new ProductQuestionAskLimiter(
                 RateLimiters::slidingWindow('per_customer', 100),
                 RateLimiters::slidingWindow('per_product', $perProductLimit),
+                RateLimiters::slidingWindow('per_ip', 100),
+                $requestStack,
             ),
             new ProductQuestionPayloadMapper(),
             new FixedCurrentCustomer($customerId),
@@ -122,6 +125,23 @@ final class ProductQuestionPostProcessorTest extends TestCase
             self::fail('The third question about one product has to be refused');
         } catch (TooManyRequestsHttpException) {
             self::assertCount(2, $this->storage->saved);
+        }
+    }
+
+    /**
+     * A product that does not exist was a 500 carrying the INSERT; it is a 422 like any other
+     * question the module refuses.
+     */
+    public function testAQuestionAboutAnUnknownProductIsUnprocessable(): void
+    {
+        $input = $this->input();
+        $input->productId = 999999;
+
+        try {
+            $this->processor(42)->process($input, new Post());
+            self::fail('A question about an unknown product has to be refused');
+        } catch (UnprocessableEntityHttpException) {
+            self::assertSame([], $this->storage->saved);
         }
     }
 

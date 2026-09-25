@@ -15,12 +15,12 @@ namespace ProductQuestion\Controller\Back;
 
 use ProductQuestion\Exception\InvalidProductQuestionException;
 use ProductQuestion\Form\ProductQuestionAnswerForm;
+use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\ProductQuestion as ProductQuestionModule;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
-use ProductQuestion\Repository\ProductTitleSourceInterface;
+use ProductQuestion\Service\BackOffice\ProductQuestionEditPresenter;
 use ProductQuestion\Service\BackOffice\ProductQuestionListFilters;
 use ProductQuestion\Service\BackOffice\ProductQuestionListPresenter;
-use ProductQuestion\Service\BackOffice\ProductQuestionStatusCatalog;
 use ProductQuestion\Service\ProductQuestionAnswerer;
 use ProductQuestion\Service\ProductQuestionRefuser;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -48,10 +48,9 @@ class ProductQuestionController extends BaseAdminController
     public function __construct(
         private readonly ProductQuestionStorageInterface $storage,
         private readonly ProductQuestionListPresenter $listPresenter,
-        private readonly ProductQuestionStatusCatalog $statusCatalog,
+        private readonly ProductQuestionEditPresenter $editPresenter,
         private readonly ProductQuestionAnswerer $answerer,
         private readonly ProductQuestionRefuser $refuser,
-        private readonly ProductTitleSourceInterface $productTitles,
     ) {
     }
 
@@ -86,35 +85,18 @@ class ProductQuestionController extends BaseAdminController
         return $this->renderQuestion($request, $question);
     }
 
-    /**
-     * @param \ProductQuestion\Model\ProductQuestion $question
-     */
-    private function renderQuestion(Request $request, $question, ?BaseForm $form = null): Response
+    private function renderQuestion(Request $request, ProductQuestion $question, ?BaseForm $form = null): Response
     {
-        $customerId = $question->getCustomerId();
-        $productId = (int) $question->getProductId();
-
         // On the error path the submitted form is handed back rather than rebuilt, so what a
         // moderator typed is still in the textarea next to the message telling them why.
         $form ??= $this->createForm(ProductQuestionAnswerForm::getName(), data: ['answer' => $question->getAnswer()]);
 
         return $this->render('product-question-edit', [
-            'question' => $question,
-            // Not `status`: TwigParser promotes every variable handed to a back-office template to
-            // a Twig global, and the web debug toolbar reads a global of that name to colour its
-            // blocks — an array there is a 500 on the whole page, in dev only.
-            'questionStatus' => $this->statusCatalog->get($question->getStatus()),
+            ...$this->editPresenter->present($question, $request->getLocale()),
             'form' => $form->getForm()->createView(),
-            // Built here rather than in the template: a module must not hard-code the admin
-            // routes of the core in its markup.
-            'customerUrl' => null === $customerId
-                ? null
-                : URL::getInstance()->absoluteUrl('/admin/customer/update', ['customer_id' => $customerId]),
-            'productUrl' => URL::getInstance()->absoluteUrl('/admin/products/update', ['product_id' => $productId]),
-            'productTitle' => $this->productTitles->titleFor($productId, $request->getLocale()),
             // The two moderation buttons are plain forms, not Thelia forms, so they carry the
             // session token by hand. The answer form gets its own from BaseForm. Not `token`:
-            // that name is the profiler's, see questionStatus above.
+            // that name is the profiler's, like `status`.
             'csrfToken' => $this->tokenProvider->assignToken(),
         ]);
     }

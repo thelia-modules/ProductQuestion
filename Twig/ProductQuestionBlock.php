@@ -118,15 +118,16 @@ class ProductQuestionBlock
             return;
         }
 
-        // Before the form is read: a replayed action has to cost as little as possible.
+        // Throws when the form is invalid, which re-renders the component with its errors. The
+        // form first, as the API validates before its processor: a typo costs nothing, and only
+        // a question that is about to be written spends the budget.
+        $this->submitForm();
+
         if (!$this->askLimiter->allows($customerId, $this->productId)) {
             $this->error = $this->trans('Too many questions have been sent. Please try again later.');
 
             return;
         }
-
-        // Throws when the form is invalid, which re-renders the component with its errors.
-        $this->submitForm();
 
         $content = $this->getForm()->get('content')->getData();
 

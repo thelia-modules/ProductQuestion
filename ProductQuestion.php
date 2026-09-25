@@ -18,16 +18,21 @@ use ProductQuestion\Repository\ProductQuestionRepository;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
 use ProductQuestion\Repository\ProductTitleRepository;
 use ProductQuestion\Repository\ProductTitleSourceInterface;
+use ProductQuestion\Repository\ProductVisibilityInterface;
+use ProductQuestion\Repository\ProductVisibilityRepository;
 use ProductQuestion\Service\Front\CurrentCustomerInterface;
 use ProductQuestion\Service\Front\SecurityContextCurrentCustomer;
 use ProductQuestion\Service\Notification\CustomerMailerInterface;
 use ProductQuestion\Service\Notification\ShopContextInterface;
 use ProductQuestion\Service\Notification\TheliaCustomerMailer;
 use ProductQuestion\Service\Notification\TheliaShopContext;
+use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
+use Propel\Runtime\Propel;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
 use Thelia\Core\Install\Database;
+use Thelia\Model\MessageQuery;
 use Thelia\Module\BaseModule;
 
 final class ProductQuestion extends BaseModule
@@ -75,17 +80,35 @@ final class ProductQuestion extends BaseModule
 
     public function postActivation(?ConnectionInterface $con = null): void
     {
-        // Thelia stores module configuration as strings, and TheliaMain.sql drops the table
-        // before creating it: replaying it on an upgrade would take every question with it.
-        if ('1' !== self::getConfigValue('is_initialized', '0')) {
-            (new Database($con))->insertSql(null, [__DIR__.DS.'Config'.DS.'TheliaMain.sql']);
+        $con ??= Propel::getConnection();
 
-            self::setConfigValue('is_initialized', '1');
+        // TheliaMain.sql drops the table before creating it, so it only runs when the table is
+        // missing. The guard is the table itself, not a module_config flag: deleting the module
+        // cascades to module_config even when the shop keeps the data, and the reinstall would
+        // then replay the DROP on every question.
+        if (!self::tableExists($con, 'product_question')) {
+            (new Database($con))->insertSql(null, [__DIR__.DS.'Config'.DS.'TheliaMain.sql']);
         }
 
         // Outside the guard: idempotent, and a shop that activated a version without the mail
         // gets the message on the next activation as well as on update().
         (new ProductQuestionMessageInstaller())->install();
+    }
+
+    public function destroy(?ConnectionInterface $con = null, $deleteModuleData = false): void
+    {
+        if (!$deleteModuleData) {
+            return;
+        }
+
+        $con ??= Propel::getConnection();
+
+        $con->exec('DROP TABLE IF EXISTS `product_question`');
+
+        // message_i18n and message_version follow by cascade.
+        MessageQuery::create()
+            ->filterByName([self::MESSAGE_ADMIN_NOTIFICATION, self::MESSAGE_CUSTOMER_ANSWERED], Criteria::IN)
+            ->delete($con);
     }
 
     public function update($currentVersion, $newVersion, ?ConnectionInterface $con = null): void
@@ -114,6 +137,12 @@ final class ProductQuestion extends BaseModule
                     'limit' => 3,
                     'interval' => '1 hour',
                 ],
+                // Registration is open: the accounts of one address share this one.
+                'product_question_ask_per_ip' => [
+                    'policy' => 'sliding_window',
+                    'limit' => 20,
+                    'interval' => '1 hour',
+                ],
             ],
         ], prepend: true);
     }
@@ -139,8 +168,20 @@ final class ProductQuestion extends BaseModule
         // services depend on needs an alias of its own.
         $servicesConfigurator->alias(ProductQuestionStorageInterface::class, ProductQuestionRepository::class);
         $servicesConfigurator->alias(ProductTitleSourceInterface::class, ProductTitleRepository::class);
+        $servicesConfigurator->alias(ProductVisibilityInterface::class, ProductVisibilityRepository::class);
         $servicesConfigurator->alias(CurrentCustomerInterface::class, SecurityContextCurrentCustomer::class);
         $servicesConfigurator->alias(ShopContextInterface::class, TheliaShopContext::class);
         $servicesConfigurator->alias(CustomerMailerInterface::class, TheliaCustomerMailer::class);
+    }
+
+    private static function tableExists(ConnectionInterface $con, string $table): bool
+    {
+        // A COUNT always yields one row: Propel's statement wrapper answers null, not false,
+        // when there is no row to fetch, so a SHOW TABLES compared to false would always
+        // report the table as present.
+        $statement = $con->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table');
+        $statement->execute(['table' => $table]);
+
+        return (int) $statement->fetchColumn() > 0;
     }
 }

@@ -33,6 +33,9 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
     /** @var list<ProductQuestion> */
     public array $deleted = [];
 
+    /** @var list<array{offset: int, limit: int}> */
+    public array $answeredPageCalls = [];
+
     private int $nextId = 1;
 
     /**
@@ -82,6 +85,18 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
         }
 
         return $found;
+    }
+
+    /**
+     * @return array{items: list<ProductQuestion>, total: int}
+     */
+    public function findAnsweredForProductPage(int $productId, string $locale, int $offset, int $limit): array
+    {
+        $this->answeredPageCalls[] = ['offset' => $offset, 'limit' => $limit];
+
+        $all = $this->findAnsweredForProduct($productId, $locale);
+
+        return ['items' => \array_slice($all, $offset, $limit), 'total' => \count($all)];
     }
 
     /**

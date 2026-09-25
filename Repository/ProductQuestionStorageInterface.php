@@ -40,6 +40,14 @@ interface ProductQuestionStorageInterface
     public function findAnsweredForProduct(int $productId, string $locale): array;
 
     /**
+     * One page of the same list, and how many rows it has in total: what the public API serves,
+     * so that a product with thousands of answers costs one page of rows and not all of them.
+     *
+     * @return array{items: list<ProductQuestion>, total: int}
+     */
+    public function findAnsweredForProductPage(int $productId, string $locale, int $offset, int $limit): array;
+
+    /**
      * Every question one customer asked, whatever its status, oldest first: what a personal
      * data export has to carry and what anonymizing an account has to go through.
      *

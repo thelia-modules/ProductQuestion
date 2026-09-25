@@ -34,4 +34,14 @@ final readonly class TheliaShopContext implements ShopContextInterface
         // The rewritten URL in that language when the shop has one, the plain view URL otherwise.
         return URL::getInstance()->retrieve('product', $productId, $locale)->toString();
     }
+
+    public function customerAdminUrl(int $customerId): string
+    {
+        return URL::getInstance()->absoluteUrl('/admin/customer/update', ['customer_id' => $customerId]);
+    }
+
+    public function productAdminUrl(int $productId): string
+    {
+        return URL::getInstance()->absoluteUrl('/admin/products/update', ['product_id' => $productId]);
+    }
 }

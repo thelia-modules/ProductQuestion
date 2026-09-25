@@ -18,6 +18,7 @@ use ProductQuestion\Exception\InvalidProductQuestionException;
 use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
+use ProductQuestion\Repository\ProductVisibilityInterface;
 use ProductQuestion\Service\Front\ProductQuestionTextSanitizer;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
@@ -39,6 +40,7 @@ final readonly class ProductQuestionAsker
         private ProductQuestionStorageInterface $storage,
         private ProductQuestionTextSanitizer $sanitizer,
         private EventDispatcherInterface $dispatcher,
+        private ProductVisibilityInterface $products,
     ) {
     }
 
@@ -76,6 +78,12 @@ final readonly class ProductQuestionAsker
 
         if ($length > self::MAXIMUM_LENGTH) {
             throw InvalidProductQuestionException::questionTooLong(self::MAXIMUM_LENGTH);
+        }
+
+        // Last, being the one rule that costs a query. Without it an unknown product reaches the
+        // foreign key as a 500, and a product the shop keeps offline gets questions and mails.
+        if (!$this->products->isVisible($productId)) {
+            throw InvalidProductQuestionException::unknownProduct();
         }
 
         $question = new ProductQuestion();

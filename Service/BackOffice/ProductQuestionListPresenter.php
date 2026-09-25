@@ -16,6 +16,7 @@ namespace ProductQuestion\Service\BackOffice;
 use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
 use ProductQuestion\Repository\ProductTitleSourceInterface;
+use ProductQuestion\Service\CustomerDisplayName;
 
 /**
  * Shapes the moderation list for Twig.
@@ -91,21 +92,8 @@ final readonly class ProductQuestionListPresenter
             'customerId' => $customer,
             // The account may have been deleted since, which the foreign key turns into a
             // null rather than into a missing row: the question stays, the name goes.
-            'customerName' => null === $customer ? null : $this->customerName($question),
+            'customerName' => null === $customer ? null : CustomerDisplayName::of($question),
         ];
-    }
-
-    private function customerName(ProductQuestion $question): ?string
-    {
-        $customer = $question->getCustomer();
-
-        if (null === $customer) {
-            return null;
-        }
-
-        $name = trim(($customer->getFirstname() ?? '').' '.($customer->getLastname() ?? ''));
-
-        return '' === $name ? $customer->getEmail() : $name;
     }
 
     /**

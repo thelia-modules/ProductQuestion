@@ -16,6 +16,7 @@ namespace ProductQuestion\Tests\Unit\Api;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\State\Pagination\TraversablePaginator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ProductQuestion\Api\Resource\ProductQuestion as ProductQuestionResource;
 use ProductQuestion\Api\State\ProductQuestionProvider;
@@ -111,6 +112,31 @@ final class ProductQuestionProviderTest extends TestCase
         $this->collection([]);
     }
 
+    /**
+     * The filters come from parse_str: `?locale[]=x` is an array. It was a 500 on "Array to
+     * string conversion", and `?productId[]=foo` read as product 1.
+     *
+     * @return iterable<string, array{array<string, mixed>}>
+     */
+    public static function nonScalarFilterProvider(): iterable
+    {
+        yield 'locale' => [['productId' => 12, 'locale' => ['x']]];
+        yield 'productId' => [['productId' => ['foo']]];
+        yield 'page' => [['productId' => 12, 'page' => ['2']]];
+        yield 'itemsPerPage' => [['productId' => 12, 'itemsPerPage' => ['5']]];
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    #[DataProvider('nonScalarFilterProvider')]
+    public function testAFilterGivenAsAnArrayIsABadRequest(array $filters): void
+    {
+        $this->expectException(BadRequestHttpException::class);
+
+        $this->collection($filters);
+    }
+
     public function testTheListIsPaginated(): void
     {
         for ($i = 10; $i < 15; ++$i) {
@@ -123,6 +149,9 @@ final class ProductQuestionProviderTest extends TestCase
         self::assertSame(6.0, $result->getTotalItems());
         self::assertSame(3.0, $result->getLastPage());
         self::assertCount(2, iterator_to_array($result));
+
+        // The page is cut by the query, not after reading every answer of the product.
+        self::assertSame([['offset' => 2, 'limit' => 2]], $this->storage->answeredPageCalls);
     }
 
     public function testOneAnsweredQuestionIsReadableByItsId(): void
