@@ -142,7 +142,13 @@ final readonly class ProductQuestionListFilters
      */
     private static function knownStatus(mixed $raw): ?int
     {
-        if (null === $raw || '' === $raw) {
+        if (\is_int($raw)) {
+            return ProductQuestionStatus::tryFrom($raw)?->value;
+        }
+
+        // Anything but a whole number in the query string is unknown too: cast, a word such as
+        // `answered` reads as 0 and turns into the Pending filter without anyone asking for it.
+        if (!\is_string($raw) || 1 !== preg_match('/^\d+$/', $raw)) {
             return null;
         }
 

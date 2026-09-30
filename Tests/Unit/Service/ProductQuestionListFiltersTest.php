@@ -62,6 +62,17 @@ final class ProductQuestionListFiltersTest extends TestCase
     }
 
     /**
+     * A word where a number is expected is unknown too. Cast to an integer it would read as 0,
+     * which is the Pending status: a hand-typed `status=answered` would show the pending tab.
+     */
+    public function testAStatusThatIsNotANumberIsNoFilterRatherThanThePendingOne(): void
+    {
+        self::assertNull($this->fromQuery('status=answered')->status);
+        self::assertFalse($this->fromQuery('status=answered')->hasAnyFilter());
+        self::assertNull($this->fromQuery('status=1abc')->status);
+    }
+
+    /**
      * The limit comes from the query string, so it is a number a visitor chose. Left alone it
      * is also how one request asks the database for every row it holds.
      */
