@@ -27,7 +27,8 @@ final readonly class TheliaShopContext implements ShopContextInterface
 
     public function hasLanguage(string $locale): bool
     {
-        return LangQuery::create()->filterByLocale($locale)->exists();
+        // A disabled language is one the storefront never renders a page in.
+        return LangQuery::create()->filterByLocale($locale)->filterByActive(true)->exists();
     }
 
     public function adminUrlOfQuestion(int $questionId): string
