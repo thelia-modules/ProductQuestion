@@ -33,4 +33,10 @@ return [
     'Your answer could not be sent. Please check it and try again.' => 'Votre réponse n’a pas pu être envoyée. Vérifiez-la et réessayez.',
     'Too many answers have been sent. Please try again later.' => 'Trop de réponses ont été envoyées. Merci de réessayer plus tard.',
     'Thank you! Your answer has been sent to the shop and will appear here once published.' => 'Merci ! Votre réponse a été transmise à la boutique et s’affichera ici une fois publiée.',
+    'This answer helped me' => 'Cette réponse m’a aidé',
+    '%count% customer(s) found this helpful' => '%count% client(s) ont trouvé cette réponse utile',
+    'Sign in to say an answer helped you.' => 'Connectez-vous pour indiquer qu’une réponse vous a aidé.',
+    'Your vote could not be counted.' => 'Votre vote n’a pas pu être pris en compte.',
+    'Thank you, your vote has been counted.' => 'Merci, votre vote a été pris en compte.',
+    'Your vote was already counted.' => 'Votre vote avait déjà été pris en compte.',
 ];

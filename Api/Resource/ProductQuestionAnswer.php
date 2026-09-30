@@ -17,6 +17,7 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\Post;
+use ProductQuestion\Api\State\ProductQuestionAnswerHelpfulProcessor;
 use ProductQuestion\Api\State\ProductQuestionAnswerPostProcessor;
 use ProductQuestion\Api\State\ProductQuestionAnswerProvider;
 use ProductQuestion\Service\ProductQuestionAnswerer;
@@ -32,6 +33,7 @@ use Symfony\Component\Validator\Constraints\NotBlank;
  * Reading one is public and limited to a published answer of a published question. Writing one
  * is a signed-in customer answering someone's question, when the shop takes such answers: it
  * goes through ProductQuestionCustomerAnswerer and waits for a moderator like the theme's form.
+ * Voting an answer helpful is a signed-in customer too, once per answer.
  * Neither the author nor the moderator is ever in the payload.
  */
 #[ApiResource(
@@ -47,6 +49,19 @@ use Symfony\Component\Validator\Constraints\NotBlank;
             security: "is_granted('ROLE_CUSTOMER')",
             processor: ProductQuestionAnswerPostProcessor::class,
             validationContext: ['groups' => [self::GROUP_FRONT_WRITE]],
+        ),
+        // No body: the answer is the one in the path, the voter the one in the token. Answers
+        // 200 with the answer and its new count, the same whether the vote was just counted or
+        // already was.
+        new Post(
+            uriTemplate: '/front/account/product_question_answers/{id}/helpful',
+            status: 200,
+            security: "is_granted('ROLE_CUSTOMER')",
+            read: false,
+            deserialize: false,
+            validate: false,
+            processor: ProductQuestionAnswerHelpfulProcessor::class,
+            name: 'product_question_answer_helpful',
         ),
     ],
     normalizationContext: ['groups' => [self::GROUP_FRONT_READ]],
