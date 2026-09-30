@@ -18,6 +18,7 @@ use PHPUnit\Framework\TestCase;
 use ProductQuestion\Api\Resource\ProductQuestion as ProductQuestionResource;
 use ProductQuestion\Api\State\ProductQuestionPostProcessor;
 use ProductQuestion\Model\ProductQuestionStatus;
+use ProductQuestion\Service\Api\ProductQuestionLocaleResolver;
 use ProductQuestion\Service\Api\ProductQuestionPayloadMapper;
 use ProductQuestion\Service\Front\ProductQuestionAskLimiter;
 use ProductQuestion\Service\Front\ProductQuestionTextSanitizer;
@@ -25,6 +26,7 @@ use ProductQuestion\Service\ProductQuestionAsker;
 use ProductQuestion\Service\ProductQuestionAvailability;
 use ProductQuestion\Tests\Double\FixedCurrentCustomer;
 use ProductQuestion\Tests\Double\FixedSettings;
+use ProductQuestion\Tests\Double\FixedShopContext;
 use ProductQuestion\Tests\Double\InMemoryClosedProducts;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionStorage;
 use ProductQuestion\Tests\Double\InMemoryProductVisibility;
@@ -72,7 +74,7 @@ final class ProductQuestionPostProcessorTest extends TestCase
             ),
             new ProductQuestionPayloadMapper(),
             new FixedCurrentCustomer($customerId),
-            $requestStack,
+            new ProductQuestionLocaleResolver($requestStack, new FixedShopContext('fr_FR', ['fr_FR', 'en_US'])),
         );
     }
 
@@ -124,6 +126,28 @@ final class ProductQuestionPostProcessorTest extends TestCase
         $this->processor(42)->process($this->input(locale: 'en_US'), new Post());
 
         self::assertSame('en_US', $this->storage->saved[0]->getLocale());
+    }
+
+    /**
+     * An API request has no shop session: its locale is the framework's "en", which no product
+     * page shows. A question stored in it was published to nobody.
+     */
+    public function testWithoutALanguageTheQuestionTakesTheShopsDefaultOneRatherThanTheFrameworks(): void
+    {
+        $this->processor(42, requestLocale: 'en')->process($this->input(), new Post());
+
+        self::assertSame('fr_FR', $this->storage->saved[0]->getLocale());
+    }
+
+    public function testALanguageTheShopDoesNotHaveIsRefused(): void
+    {
+        try {
+            $this->processor(42)->process($this->input(locale: 'xx_XX'), new Post());
+            self::fail('A question in a language the shop does not have was accepted.');
+        } catch (UnprocessableEntityHttpException) {
+        }
+
+        self::assertSame([], $this->storage->saved);
     }
 
     public function testNoTokenMeansNoQuestion(): void

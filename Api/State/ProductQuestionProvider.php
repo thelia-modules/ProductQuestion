@@ -22,11 +22,11 @@ use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Repository\ProductQuestionAnswerStorageInterface;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
 use ProductQuestion\Repository\ProductVisibilityInterface;
+use ProductQuestion\Service\Api\ProductQuestionLocaleResolver;
 use ProductQuestion\Service\Api\ProductQuestionPayloadMapper;
 use ProductQuestion\Service\Front\ProductQuestionSearchOffer;
 use ProductQuestion\Service\Front\QuestionSearchTerm;
 use ProductQuestion\Service\ProductQuestionSettingsInterface;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 /**
@@ -51,7 +51,7 @@ final readonly class ProductQuestionProvider implements ProviderInterface
     public function __construct(
         private ProductQuestionStorageInterface $storage,
         private ProductQuestionPayloadMapper $mapper,
-        private RequestStack $requestStack,
+        private ProductQuestionLocaleResolver $locales,
         private ProductVisibilityInterface $products,
         private ProductQuestionAnswerStorageInterface $answers,
         private ProductQuestionSearchOffer $searchOffer,
@@ -96,11 +96,7 @@ final readonly class ProductQuestionProvider implements ProviderInterface
         if ('' === $locale && $this->settings->showsAllLanguages()) {
             $locale = null;
         } elseif ('' === $locale) {
-            $locale = $this->requestStack->getCurrentRequest()?->getLocale() ?? '';
-
-            if ('' === $locale) {
-                throw new BadRequestHttpException('The "locale" query parameter is required: a question is shown in the language it was asked in.');
-            }
+            $locale = $this->locales->fallback();
         }
 
         $page = max(1, (int) (self::scalar($filters, 'page') ?? 1));

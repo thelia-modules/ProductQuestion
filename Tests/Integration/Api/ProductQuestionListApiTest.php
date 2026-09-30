@@ -63,7 +63,7 @@ final class ProductQuestionListApiTest extends ApiTestCase
         $this->publish('Est-ce pliable ?', 'fr_FR');
 
         self::assertNotContains('Est-ce pliable ?', $this->listed('&locale=en_US'));
-        self::assertNotContains('Est-ce pliable ?', $this->listed(''), 'Off: the language of the request.');
+        self::assertNotContains('Est-ce pliable ?', $this->listed(''), 'Off: one language, the default one for an API request.');
 
         (new ModuleConfigProductQuestionSettings())->setShowsAllLanguages(true);
 

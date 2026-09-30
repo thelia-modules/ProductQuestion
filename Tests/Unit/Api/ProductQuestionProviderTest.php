@@ -23,9 +23,11 @@ use ProductQuestion\Api\State\ProductQuestionProvider;
 use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Model\ProductQuestionAnswer;
 use ProductQuestion\Model\ProductQuestionStatus;
+use ProductQuestion\Service\Api\ProductQuestionLocaleResolver;
 use ProductQuestion\Service\Api\ProductQuestionPayloadMapper;
 use ProductQuestion\Service\Front\ProductQuestionSearchOffer;
 use ProductQuestion\Tests\Double\FixedSettings;
+use ProductQuestion\Tests\Double\FixedShopContext;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionAnswerStorage;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionStorage;
 use ProductQuestion\Tests\Double\InMemoryProductVisibility;
@@ -94,7 +96,7 @@ final class ProductQuestionProviderTest extends TestCase
         return new ProductQuestionProvider(
             $this->storage,
             new ProductQuestionPayloadMapper(),
-            $requestStack,
+            new ProductQuestionLocaleResolver($requestStack, new FixedShopContext('fr_FR', ['fr_FR', 'en_US'])),
             new InMemoryProductVisibility($visibleProductIds),
             $this->answers,
             new ProductQuestionSearchOffer($this->settings),
@@ -133,6 +135,17 @@ final class ProductQuestionProviderTest extends TestCase
         $items = $this->collection(['productId' => 12], 'en_US');
 
         self::assertSame([4], array_map(static fn (ProductQuestionResource $item): ?int => $item->id, $items));
+    }
+
+    /**
+     * An API request has no shop session: its locale is the framework's "en", in which no
+     * question is ever asked. The list is the one of the shop's default language instead.
+     */
+    public function testWithoutALanguageTheListIsTheShopsDefaultOneRatherThanTheFrameworks(): void
+    {
+        $items = $this->collection(['productId' => 12], 'en');
+
+        self::assertSame([1], array_map(static fn (ProductQuestionResource $item): ?int => $item->id, $items));
     }
 
     public function testAListWithNoProductIsRefused(): void

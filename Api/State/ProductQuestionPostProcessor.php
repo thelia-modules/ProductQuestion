@@ -18,12 +18,12 @@ use ApiPlatform\State\ProcessorInterface;
 use ProductQuestion\Api\Resource\ProductQuestion as ProductQuestionResource;
 use ProductQuestion\Exception\InvalidProductQuestionException;
 use ProductQuestion\Exception\ProductQuestionsClosedException;
+use ProductQuestion\Service\Api\ProductQuestionLocaleResolver;
 use ProductQuestion\Service\Api\ProductQuestionPayloadMapper;
 use ProductQuestion\Service\Front\CurrentCustomerInterface;
 use ProductQuestion\Service\Front\ProductQuestionAskLimiter;
 use ProductQuestion\Service\ProductQuestionAsker;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
@@ -48,7 +48,7 @@ final readonly class ProductQuestionPostProcessor implements ProcessorInterface
         // API request does not have. The customer is who the JWT names.
         #[Autowire(service: TokenCurrentCustomer::class)]
         private CurrentCustomerInterface $currentCustomer,
-        private RequestStack $requestStack,
+        private ProductQuestionLocaleResolver $locales,
     ) {
     }
 
@@ -75,8 +75,12 @@ final readonly class ProductQuestionPostProcessor implements ProcessorInterface
 
         $locale = trim((string) $data->locale);
 
+        // A question is shown in the language it was asked in: in one the shop does not have,
+        // it would be shown nowhere.
         if ('' === $locale) {
-            $locale = $this->requestStack->getCurrentRequest()?->getLocale() ?? '';
+            $locale = $this->locales->fallback();
+        } elseif (!$this->locales->isShopLanguage($locale)) {
+            throw new UnprocessableEntityHttpException(\sprintf('"%s" is not a language of the shop.', $locale));
         }
 
         try {
