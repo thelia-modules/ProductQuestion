@@ -134,6 +134,7 @@ class ProductQuestionController extends BaseAdminController
             $data = $this->validateForm($form)->getData();
 
             $this->answerer->answer($question, $data['answer'] ?? null, $this->currentAdminId());
+            $this->log(AccessManager::UPDATE, \sprintf('Official answer to product question %d published', $id), $id);
         } catch (FormValidationException|InvalidProductQuestionException $exception) {
             $this->setupFormErrorContext(
                 $this->getTranslator()->trans('Answering a question', [], ProductQuestionModule::MESSAGE_DOMAIN_BO),
@@ -163,6 +164,7 @@ class ProductQuestionController extends BaseAdminController
 
         if (null !== $question) {
             $this->publisher->publish($question);
+            $this->log(AccessManager::UPDATE, \sprintf('Product question %d published without an answer', $id), $id);
         }
 
         return $this->backToQuestion($id);
@@ -191,6 +193,12 @@ class ProductQuestionController extends BaseAdminController
             default => $this->answerModerator->delete($answer),
         };
 
+        $this->log(
+            'delete' === $decision ? AccessManager::DELETE : AccessManager::UPDATE,
+            \sprintf('Answer %d to product question %d: %s', $answerId, (int) $answer->getQuestionId(), $decision),
+            (int) $answer->getQuestionId(),
+        );
+
         return $this->backToQuestion((int) $answer->getQuestionId());
     }
 
@@ -205,7 +213,9 @@ class ProductQuestionController extends BaseAdminController
             return $denied;
         }
 
-        $this->settings->setAllowsCustomerAnswers('1' === $request->request->get('allow_customer_answers'));
+        $allowed = '1' === $request->request->get('allow_customer_answers');
+        $this->settings->setAllowsCustomerAnswers($allowed);
+        $this->log(AccessManager::UPDATE, \sprintf('Product question settings saved: customer answers %s', $allowed ? 'on' : 'off'));
 
         return $this->backToList();
     }
@@ -225,6 +235,7 @@ class ProductQuestionController extends BaseAdminController
 
         if (null !== $question) {
             $this->refuser->refuse($question);
+            $this->log(AccessManager::UPDATE, \sprintf('Product question %d refused', $id), $id);
         }
 
         return $this->backToQuestion($id);
@@ -245,6 +256,7 @@ class ProductQuestionController extends BaseAdminController
 
         if (null !== $question) {
             $this->storage->delete($question);
+            $this->log(AccessManager::DELETE, \sprintf('Product question %d deleted', $id), $id);
         }
 
         return $this->backToList();
@@ -274,6 +286,15 @@ class ProductQuestionController extends BaseAdminController
         }
 
         return $this->backToList();
+    }
+
+    /**
+     * Every accepted moderation action leaves a line in the administration log, under the module
+     * and the question it touched.
+     */
+    private function log(string $access, string $message, ?int $questionId = null): void
+    {
+        $this->adminLogAppend(ProductQuestionModule::getModuleCode(), $access, $message, $questionId);
     }
 
     private function currentAdminId(): int
