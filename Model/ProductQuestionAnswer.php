@@ -23,22 +23,7 @@ use ProductQuestion\Model\Base\ProductQuestionAnswer as BaseProductQuestionAnswe
  */
 class ProductQuestionAnswer extends BaseProductQuestionAnswer
 {
-    public function getStatusEnum(): ?ProductQuestionStatus
-    {
-        $status = $this->getStatus();
-
-        return null === $status ? null : ProductQuestionStatus::tryFrom($status);
-    }
-
-    public function setStatusEnum(ProductQuestionStatus $status): static
-    {
-        return $this->setStatus($status->value);
-    }
-
-    public function isPublished(): bool
-    {
-        return ProductQuestionStatus::Published === $this->getStatusEnum();
-    }
+    use ProductQuestionStatusTrait;
 
     public function isOfficialAnswer(): bool
     {

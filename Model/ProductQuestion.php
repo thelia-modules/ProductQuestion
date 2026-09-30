@@ -17,31 +17,7 @@ use ProductQuestion\Model\Base\ProductQuestion as BaseProductQuestion;
 
 class ProductQuestion extends BaseProductQuestion
 {
-    /**
-     * The stored status as the enum, or null when the column holds a value no version of
-     * this module ever wrote. Callers decide what to do with that; nothing here pretends
-     * an unknown row is pending.
-     */
-    public function getStatusEnum(): ?ProductQuestionStatus
-    {
-        $status = $this->getStatus();
-
-        return null === $status ? null : ProductQuestionStatus::tryFrom($status);
-    }
-
-    /**
-     * The generated setter takes the TINYINT as ?int and rejects anything else under
-     * strict_types. Going through the enum is what keeps that cast in one place.
-     */
-    public function setStatusEnum(ProductQuestionStatus $status): static
-    {
-        return $this->setStatus($status->value);
-    }
-
-    public function isPublished(): bool
-    {
-        return ProductQuestionStatus::Published === $this->getStatusEnum();
-    }
+    use ProductQuestionStatusTrait;
 
     /**
      * @deprecated since 1.3.0, a question is published on its own and may have no answer yet:
