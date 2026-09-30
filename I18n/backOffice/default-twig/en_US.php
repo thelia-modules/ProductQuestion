@@ -79,4 +79,6 @@ return [
     'The questions already published stay on the product page.' => 'The questions already published stay on the product page.',
     'Questions are closed on the whole shop for now, whatever this product says.' => 'Questions are closed on the whole shop for now, whatever this product says.',
     'Save' => 'Save',
+
+    'waiting for moderation' => 'waiting for moderation',
 ];

@@ -79,4 +79,6 @@ return [
     'The questions already published stay on the product page.' => 'Les questions déjà publiées restent sur la fiche produit.',
     'Questions are closed on the whole shop for now, whatever this product says.' => 'Les questions sont fermées sur toute la boutique pour le moment, quel que soit le réglage de ce produit.',
     'Save' => 'Enregistrer',
+
+    'waiting for moderation' => 'en attente de modération',
 ];

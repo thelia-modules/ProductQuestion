@@ -15,6 +15,7 @@ namespace ProductQuestion\Hook;
 
 use ProductQuestion\ProductQuestion;
 use ProductQuestion\Repository\ClosedProductStorageInterface;
+use ProductQuestion\Service\BackOffice\PendingModerationCount;
 use ProductQuestion\Service\ProductQuestionSettingsInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Core\Event\Hook\HookRenderEvent;
@@ -46,6 +47,7 @@ class BackHook extends BaseHook
         private readonly ClosedProductStorageInterface $closedProducts,
         private readonly ProductQuestionSettingsInterface $settings,
         private readonly SecurityContext $securityContext,
+        private readonly PendingModerationCount $pendingCount,
         ?EventDispatcherInterface $dispatcher = null,
         ?ParserResolver $parserResolver = null,
     ) {
@@ -72,8 +74,12 @@ class BackHook extends BaseHook
     public function onMainInTopMenuItems(HookRenderEvent $event): void
     {
         // The theme passes the current route as admin_current_location, which is what lets
-        // the entry light up on the module's own screens.
-        $event->add($this->render('ProductQuestion/hook/menu-item.html.twig', $event->getTemplateVars()));
+        // the entry light up on the module's own screens. The count is read here and nowhere
+        // else: a back-office response that draws no menu costs no query of this module.
+        $event->add($this->render('ProductQuestion/hook/menu-item.html.twig', [
+            ...$event->getTemplateVars(),
+            'pendingCount' => $this->pendingCount->total(),
+        ]));
     }
 
     public function onProductTabContent(HookRenderEvent $event): void
