@@ -11,7 +11,7 @@
     </li>
     {% for entry in statuses %}
         <li class="nav-item">
-            <a class="nav-link {{ filters.status == entry.value and not filters.pendingAnswers ? 'active' : '' }}"
+            <a class="nav-link {{ filters.status is not null and filters.status == entry.value and not filters.pendingAnswers ? 'active' : '' }}"
                href="{{ base }}?{{ filters.withStatus(entry.value).toQueryParams|url_encode }}"
                data-testid="product-question-tab-{{ entry.value }}">
                 {{ entry.label }}

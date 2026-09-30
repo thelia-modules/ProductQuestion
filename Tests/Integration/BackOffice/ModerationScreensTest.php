@@ -250,6 +250,20 @@ final class ModerationScreensTest extends WebIntegrationTestCase
         self::assertSame(0, $this->logLines());
     }
 
+    /**
+     * Unfiltered, only "All" is the active tab: Twig's null == 0 must not light up "Pending".
+     */
+    public function testOnlyTheTabOfTheCurrentFilterIsActive(): void
+    {
+        $crawler = $this->client->request('GET', self::LIST_URL);
+        self::assertCount(1, $crawler->filter('[data-testid="product-question-status-tabs"] .nav-link.active'));
+        self::assertStringNotContainsString('active', (string) $crawler->filter('[data-testid="product-question-tab-0"]')->attr('class'));
+
+        $crawler = $this->client->request('GET', self::LIST_URL.'?status=0');
+        self::assertCount(1, $crawler->filter('[data-testid="product-question-status-tabs"] .nav-link.active'));
+        self::assertStringContainsString('active', (string) $crawler->filter('[data-testid="product-question-tab-0"]')->attr('class'));
+    }
+
     private function menuCount(): int
     {
         $crawler = $this->client->request('GET', self::LIST_URL);
