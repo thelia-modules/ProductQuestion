@@ -7,6 +7,7 @@ parameters:
             - vendor (?)
     # Propel builds Model/Base, Model/Map and Model/Event into the install's var/ when the
     # module is activated. Without them the analyser sees a stub extending nothing and
-    # reports every generated accessor as undefined.
+    # reports every generated accessor as undefined. Read from the directory PHPStan is run
+    # from, the root of the install, wherever the module sits in it (local/modules or vendor).
     scanDirectories:
-        - ../../../var/propel/dev/model
+        - %currentWorkingDirectory%/var/propel/dev/model
