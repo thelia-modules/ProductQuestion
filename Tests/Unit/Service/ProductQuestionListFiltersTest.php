@@ -101,6 +101,18 @@ final class ProductQuestionListFiltersTest extends TestCase
     }
 
     /**
+     * A page number past what an integer offset can hold was a float, then a TypeError: a 500
+     * for anyone who types a long number in the address bar.
+     */
+    public function testAnOversizedPageIsAnOffsetPastTheLastRowRatherThanAnError(): void
+    {
+        $offset = $this->fromQuery('page=99999999999999999999&limit=20')->offset();
+
+        self::assertGreaterThan(0, $offset);
+        self::assertSame(0, $offset % 20);
+    }
+
+    /**
      * A link built from the filters starts the reading again, otherwise a moderator lands on
      * page four of a selection that now has one page.
      */

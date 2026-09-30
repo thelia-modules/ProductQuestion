@@ -109,10 +109,14 @@ final readonly class ProductQuestionProvider implements ProviderInterface
 
         $search = $this->search($filters, $productId, $locale);
 
+        // The page is a number anyone types: past the last offset an integer can hold, the
+        // product would turn into a float. It is an empty page, as any page past the last one.
+        $offset = min($page - 1, intdiv(\PHP_INT_MAX, $itemsPerPage)) * $itemsPerPage;
+
         // An offline product has no questions to show: the same empty page a product nobody
         // asked about gets, rather than an error that tells the product exists.
         $slice = $this->products->isVisible($productId)
-            ? $this->storage->findPublishedForProductPage($productId, $locale, ($page - 1) * $itemsPerPage, $itemsPerPage, $search)
+            ? $this->storage->findPublishedForProductPage($productId, $locale, $offset, $itemsPerPage, $search)
             : ['items' => [], 'total' => 0];
 
         $answers = $this->answers->findPublishedForQuestions(array_map(
