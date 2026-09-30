@@ -37,7 +37,7 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
     /**
      * @return list<ProductQuestion>
      */
-    public function findPublishedForProduct(int $productId, string $locale, ?string $search = null): array
+    public function findPublishedForProduct(int $productId, ?string $locale, ?string $search = null): array
     {
         return $this->publishedForProduct($productId, $locale, $search)
             ->find()
@@ -47,7 +47,7 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
     /**
      * @return array{items: list<ProductQuestion>, total: int}
      */
-    public function findPublishedForProductPage(int $productId, string $locale, int $offset, int $limit, ?string $search = null): array
+    public function findPublishedForProductPage(int $productId, ?string $locale, int $offset, int $limit, ?string $search = null): array
     {
         $query = $this->publishedForProduct($productId, $locale, $search);
 
@@ -63,7 +63,7 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
         return ['items' => $items, 'total' => $total];
     }
 
-    public function countPublishedForProduct(int $productId, string $locale): int
+    public function countPublishedForProduct(int $productId, ?string $locale): int
     {
         return $this->publishedForProduct($productId, $locale)->count();
     }
@@ -224,12 +224,15 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
         }
     }
 
-    private function publishedForProduct(int $productId, string $locale, ?string $search = null): ProductQuestionQuery
+    private function publishedForProduct(int $productId, ?string $locale, ?string $search = null): ProductQuestionQuery
     {
         $query = ProductQuestionQuery::create()
             ->filterByProductId($productId)
-            ->filterByStatus(ProductQuestionStatus::Published->value)
-            ->filterByLocale($locale);
+            ->filterByStatus(ProductQuestionStatus::Published->value);
+
+        if (null !== $locale) {
+            $query->filterByLocale($locale);
+        }
 
         if (null !== $search) {
             // The question, or one of its published answers: a visitor looking for "waterproof"

@@ -56,4 +56,6 @@ return [
     'Clear the search' => 'Effacer la recherche',
     '%count% question(s) match "%term%".' => '%count% question(s) correspondent à « %term% ».',
     'No question matches "%term%".' => 'Aucune question ne correspond à « %term% ».',
+
+    'Asked in %language%' => 'Posée en %language%',
 ];

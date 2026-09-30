@@ -40,7 +40,9 @@ final class ProductQuestionListApiTest extends ApiTestCase
 
     protected function tearDown(): void
     {
-        (new ModuleConfigProductQuestionSettings())->setSearchThreshold(0);
+        $settings = new ModuleConfigProductQuestionSettings();
+        $settings->setSearchThreshold(0);
+        $settings->setShowsAllLanguages(false);
 
         parent::tearDown();
     }
@@ -54,6 +56,20 @@ final class ProductQuestionListApiTest extends ApiTestCase
 
         $settings->setSearchThreshold(3);
         self::assertCount(3, $this->listed('&locale=en_US&search=waterproof'), 'Three questions, threshold three: no search.');
+    }
+
+    public function testEveryLanguageIsListedWhenTheShopShowsThemAll(): void
+    {
+        $this->publish('Est-ce pliable ?', 'fr_FR');
+
+        self::assertNotContains('Est-ce pliable ?', $this->listed('&locale=en_US'));
+        self::assertNotContains('Est-ce pliable ?', $this->listed(''), 'Off: the language of the request.');
+
+        (new ModuleConfigProductQuestionSettings())->setShowsAllLanguages(true);
+
+        self::assertContains('Est-ce pliable ?', $this->listed(''));
+        self::assertCount(4, $this->listed(''));
+        self::assertSame(['Est-ce pliable ?'], $this->listed('&locale=fr_FR'), 'A language named is still honoured.');
     }
 
     private function publish(string $content, string $locale): void

@@ -53,7 +53,13 @@
     {% if questions is not empty %}
         <ul class="ProductQuestion-list" data-testid="product-question-list">
             {% for question in questions %}
-                <li class="ProductQuestion-item" data-testid="product-question-item-{{ question.id }}">
+                {# A question asked in another language than the page's says which, in words and in
+                   a lang attribute a screen reader reads it with. #}
+                {% set otherLanguage = question.locale != this.locale %}
+                <li class="ProductQuestion-item" data-testid="product-question-item-{{ question.id }}"{% if otherLanguage %} lang="{{ this.htmlLang(question.locale) }}"{% endif %}>
+                    {% if otherLanguage %}
+                        <p class="ProductQuestion-language paragraph-4 text-grey" lang="{{ this.htmlLang(this.locale) }}" data-testid="product-question-language-{{ question.id }}">{{ labels.askedIn|replace({'%language%': this.languageName(question.locale)}) }}</p>
+                    {% endif %}
                     <p class="ProductQuestion-question paragraph-2 text-black">{{ question.content|nl2br }}</p>
                     {% if question.answers is not empty %}
                         <ul class="ProductQuestion-answers">

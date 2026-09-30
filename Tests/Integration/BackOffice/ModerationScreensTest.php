@@ -289,6 +289,21 @@ final class ModerationScreensTest extends WebIntegrationTestCase
         self::assertSame(0, $settings->searchThreshold(), 'Left empty: no search.');
     }
 
+    public function testEveryLanguageIsTurnedOnFromTheListScreenAndOffByDefault(): void
+    {
+        $settings = new ModuleConfigProductQuestionSettings();
+        self::assertFalse($settings->showsAllLanguages());
+
+        $crawler = $this->client->request('GET', self::LIST_URL);
+        $token = (string) $crawler->filter('[data-testid="product-question-settings"] input[name="_token"]')->attr('value');
+
+        $this->client->request('POST', self::LIST_URL.'/settings', ['_token' => $token, 'show_all_languages' => '1']);
+        self::assertTrue($settings->showsAllLanguages());
+
+        $this->client->request('POST', self::LIST_URL.'/settings', ['_token' => $token]);
+        self::assertFalse($settings->showsAllLanguages());
+    }
+
     private function tokenOfTheEditScreen(): string
     {
         $crawler = $this->client->request('GET', self::LIST_URL.'/'.$this->question->getId());

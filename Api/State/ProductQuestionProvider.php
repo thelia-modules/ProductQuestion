@@ -25,6 +25,7 @@ use ProductQuestion\Repository\ProductVisibilityInterface;
 use ProductQuestion\Service\Api\ProductQuestionPayloadMapper;
 use ProductQuestion\Service\Front\ProductQuestionSearchOffer;
 use ProductQuestion\Service\Front\QuestionSearchTerm;
+use ProductQuestion\Service\ProductQuestionSettingsInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
@@ -54,6 +55,7 @@ final readonly class ProductQuestionProvider implements ProviderInterface
         private ProductVisibilityInterface $products,
         private ProductQuestionAnswerStorageInterface $answers,
         private ProductQuestionSearchOffer $searchOffer,
+        private ProductQuestionSettingsInterface $settings,
     ) {
     }
 
@@ -89,12 +91,16 @@ final readonly class ProductQuestionProvider implements ProviderInterface
 
         $locale = trim(self::scalar($filters, 'locale') ?? '');
 
-        if ('' === $locale) {
+        // A shop that shows every language on its product pages lists them all here too, unless
+        // the client names one. Each question carries its own.
+        if ('' === $locale && $this->settings->showsAllLanguages()) {
+            $locale = null;
+        } elseif ('' === $locale) {
             $locale = $this->requestStack->getCurrentRequest()?->getLocale() ?? '';
-        }
 
-        if ('' === $locale) {
-            throw new BadRequestHttpException('The "locale" query parameter is required: a question is shown in the language it was asked in.');
+            if ('' === $locale) {
+                throw new BadRequestHttpException('The "locale" query parameter is required: a question is shown in the language it was asked in.');
+            }
         }
 
         $page = max(1, (int) (self::scalar($filters, 'page') ?? 1));
@@ -134,7 +140,7 @@ final readonly class ProductQuestionProvider implements ProviderInterface
      *
      * @param array<string, mixed> $filters
      */
-    private function search(array $filters, int $productId, string $locale): ?string
+    private function search(array $filters, int $productId, ?string $locale): ?string
     {
         if (!$this->searchOffer->isEnabled()) {
             return null;

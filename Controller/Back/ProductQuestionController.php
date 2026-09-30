@@ -84,6 +84,7 @@ class ProductQuestionController extends BaseAdminController
             'questionsClosed' => $this->settings->questionsClosed(),
             'questionsPerPage' => $this->settings->questionsPerPage(),
             'searchThreshold' => $this->settings->searchThreshold(),
+            'showsAllLanguages' => $this->settings->showsAllLanguages(),
             // The bulk buttons follow the rights their route checks.
             'canUpdate' => $this->isModuleGranted(AccessManager::UPDATE),
             'canDelete' => $this->isModuleGranted(AccessManager::DELETE),
@@ -279,12 +280,15 @@ class ProductQuestionController extends BaseAdminController
         $this->settings->setQuestionsClosed($closed);
         $this->settings->setQuestionsPerPage(self::number($request, 'questions_per_page'));
         $this->settings->setSearchThreshold(self::number($request, 'search_threshold'));
+        $allLanguages = '1' === $request->request->get('show_all_languages');
+        $this->settings->setShowsAllLanguages($allLanguages);
         $this->log(AccessManager::UPDATE, \sprintf(
-            'Product question settings saved: customer answers %s, questions %s, %d per page, search above %d',
+            'Product question settings saved: customer answers %s, questions %s, %d per page, search above %d, %s',
             $allowed ? 'on' : 'off',
             $closed ? 'closed' : 'open',
             $this->settings->questionsPerPage(),
             $this->settings->searchThreshold(),
+            $allLanguages ? 'every language' : 'page language only',
         ));
 
         return $this->backToList();

@@ -98,6 +98,7 @@ final class ProductQuestionProviderTest extends TestCase
             new InMemoryProductVisibility($visibleProductIds),
             $this->answers,
             new ProductQuestionSearchOffer($this->settings),
+            $this->settings,
         );
     }
 
@@ -250,5 +251,19 @@ final class ProductQuestionProviderTest extends TestCase
         $this->settings->setSearchThreshold(0);
         self::assertCount(2, $this->collection(['productId' => 12, 'locale' => 'fr_FR', 'search' => 'pliable']));
         self::assertSame(1, $this->storage->publishedCounts, 'No threshold, no count.');
+    }
+
+    /**
+     * A shop that shows every language lists them all when the client names none; one named is
+     * still honoured.
+     */
+    public function testEveryLanguageIsListedWhenTheShopShowsThemAll(): void
+    {
+        $this->settings->setShowsAllLanguages(true);
+
+        $ids = array_map(static fn (ProductQuestionResource $item): ?int => $item->id, $this->collection(['productId' => 12]));
+        sort($ids);
+        self::assertSame([1, 4], $ids);
+        self::assertSame([4], array_map(static fn (ProductQuestionResource $item): ?int => $item->id, $this->collection(['productId' => 12, 'locale' => 'en_US'])));
     }
 }

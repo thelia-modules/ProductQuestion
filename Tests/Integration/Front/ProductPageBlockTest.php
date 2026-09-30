@@ -55,6 +55,7 @@ final class ProductPageBlockTest extends WebIntegrationTestCase
         $settings->setQuestionsClosed(false);
         $settings->setQuestionsPerPage(0);
         $settings->setSearchThreshold(0);
+        $settings->setShowsAllLanguages(false);
 
         parent::tearDown();
     }
@@ -178,6 +179,43 @@ final class ProductPageBlockTest extends WebIntegrationTestCase
         $this->publish('How big is it?');
 
         self::assertSame('?questions_page=2&questions_search=waterproof#product-questions', $this->block('?questions_search=waterproof')->filter('[data-testid="product-question-more"]')->attr('href'));
+    }
+
+    /**
+     * Recette 8 of the spec: out of the box, the English page does not show what was asked in
+     * French.
+     */
+    public function testAQuestionAskedInAnotherLanguageIsNotShownByDefault(): void
+    {
+        $this->publish('Does it fold?');
+        $this->publish('Est-ce pliable ?', 'fr_FR');
+
+        $block = $this->block();
+
+        self::assertStringContainsString('Does it fold?', $block->text());
+        self::assertStringNotContainsString('Est-ce pliable ?', $block->text());
+    }
+
+    /**
+     * Every language when the shop says so, each question telling the language it was asked in,
+     * in words and in its lang attribute.
+     */
+    public function testEveryLanguageIsShownWithItsLanguageWhenTheShopSaysSo(): void
+    {
+        (new ModuleConfigProductQuestionSettings())->setShowsAllLanguages(true);
+        $english = $this->publish('Does it fold?');
+        $french = $this->publish('Est-ce pliable ?', 'fr_FR');
+
+        $block = $this->block();
+
+        $item = $block->filter('[data-testid="product-question-item-'.$french->getId().'"]');
+        self::assertStringContainsString('Est-ce pliable ?', $item->text());
+        self::assertSame('fr-FR', $item->attr('lang'));
+        self::assertSame('Asked in French', trim($item->filter('[data-testid="product-question-language-'.$french->getId().'"]')->text()));
+
+        $own = $block->filter('[data-testid="product-question-item-'.$english->getId().'"]');
+        self::assertNull($own->attr('lang'), 'A question in the language of the page says nothing of it.');
+        self::assertCount(0, $own->filter('.ProductQuestion-language'));
     }
 
     private function publish(string $content, string $locale = 'en_US'): ProductQuestion
