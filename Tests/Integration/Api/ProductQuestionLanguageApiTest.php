@@ -67,4 +67,35 @@ final class ProductQuestionLanguageApiTest extends ApiTestCase
         self::assertSame(422, $response->getStatusCode(), (string) $response->getContent());
         self::assertSame(0, ProductQuestionQuery::create()->filterByProductId($product->getId())->count());
     }
+
+    /**
+     * A language the shop has disabled (lang.active = 0) is refused like one it does not have:
+     * the storefront never renders a product page in it.
+     */
+    public function testAQuestionInALanguageTheShopHasDisabledIsRefused(): void
+    {
+        static::getContainer()->get('limiter.product_question_ask_per_ip')->create('127.0.0.1')->reset();
+
+        $disabled = LangQuery::create()->filterByActive(false)->findOne();
+
+        if (null === $disabled) {
+            $disabled = LangQuery::create()->filterByByDefault(0)->findOne();
+            self::assertNotNull($disabled, 'The shop needs a second language for this test.');
+            $disabled->setActive(false)->save();
+        }
+
+        $locale = (string) $disabled->getLocale();
+
+        $factory = $this->createFixtureFactory();
+        $product = $factory->product($factory->category(), $factory->taxRule(), $factory->currency(), ['visible' => 1]);
+
+        $response = $this->jsonRequest('POST', '/api/front/account/product_questions', [
+            'productId' => $product->getId(),
+            'locale' => $locale,
+            'content' => 'Is it waterproof?',
+        ], $this->authenticateAsCustomer());
+
+        self::assertSame(422, $response->getStatusCode(), \sprintf('A question in the disabled language "%s" was accepted: %s', $locale, (string) $response->getContent()));
+        self::assertSame(0, ProductQuestionQuery::create()->filterByProductId($product->getId())->count());
+    }
 }
