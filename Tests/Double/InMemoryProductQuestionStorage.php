@@ -138,6 +138,11 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
         return $counts;
     }
 
+    public function countPending(): int
+    {
+        return $this->countByStatus()[ProductQuestionStatus::Pending->value] ?? 0;
+    }
+
     /**
      * @return array{items: list<ProductQuestion>, total: int}
      */

@@ -65,6 +65,9 @@ interface ProductQuestionStorageInterface
      */
     public function countByStatus(): array;
 
+    /** How many questions wait for a moderator, across the shop. An indexed count. */
+    public function countPending(): int;
+
     /**
      * One page of the moderation list, and how many rows the filters match in total.
      *

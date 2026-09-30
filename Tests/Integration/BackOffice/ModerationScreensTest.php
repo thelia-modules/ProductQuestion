@@ -146,6 +146,39 @@ final class ModerationScreensTest extends WebIntegrationTestCase
         self::assertSame(1, AdminLogQuery::create()->filterByResource('ProductQuestion')->filterByMessage('%settings%', \Propel\Runtime\ActiveQuery\Criteria::LIKE)->count());
     }
 
+    /**
+     * The menu entry counts what waits for a moderator: questions and customer answers alike.
+     */
+    public function testTheMenuShowsHowManyItemsWaitForAModerator(): void
+    {
+        $before = $this->menuCount();
+
+        $answer = (new ProductQuestionAnswer())
+            ->setQuestionId((int) $this->question->getId())
+            ->setContent('Customer answer under moderation.')
+            ->setStatusEnum(ProductQuestionStatus::Pending);
+        $answer->save();
+
+        self::assertSame($before + 1, $this->menuCount());
+
+        // Written by query: the instances went through the list page, whose join hydrated them.
+        ProductQuestionQuery::create()->filterById($this->question->getId())->update(['Status' => ProductQuestionStatus::Published->value]);
+        ProductQuestionAnswerQuery::create()->filterById($answer->getId())->update(['Status' => ProductQuestionStatus::Published->value]);
+
+        self::assertSame($before - 1, $this->menuCount());
+    }
+
+    private function menuCount(): int
+    {
+        $crawler = $this->client->request('GET', self::LIST_URL);
+        self::assertSame(200, $this->client->getResponse()->getStatusCode());
+        self::assertCount(1, $crawler->filter('[data-testid="bo-nav-product-question"]'));
+
+        $badge = $crawler->filter('[data-testid="bo-nav-product-question-pending"]');
+
+        return 0 === $badge->count() ? 0 : (int) $badge->text();
+    }
+
     private function tokenOfTheEditScreen(): string
     {
         $crawler = $this->client->request('GET', self::LIST_URL.'/'.$this->question->getId());

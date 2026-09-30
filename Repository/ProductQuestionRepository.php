@@ -94,6 +94,13 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
         return $counts;
     }
 
+    public function countPending(): int
+    {
+        return ProductQuestionQuery::create()
+            ->filterByStatus(ProductQuestionStatus::Pending->value)
+            ->count();
+    }
+
     /**
      * @return array{items: list<ProductQuestion>, total: int}
      */
