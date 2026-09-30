@@ -19,15 +19,18 @@ use ProductQuestion\Repository\ProductTitleSourceInterface;
 use ProductQuestion\Service\Notification\CustomerMailerInterface;
 use ProductQuestion\Service\Notification\MailFailure;
 use ProductQuestion\Service\Notification\ProductQuestionAnswerNotification;
+use ProductQuestion\Service\Notification\ProductQuestionUnsubscribeLink;
 use ProductQuestion\Service\Notification\ShopContextInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
- * Tells the customer their question has been answered.
+ * Tells the customer their question has been answered, the shop's answer or another customer's.
  *
- * Once, when the answer is first published: an answer edited later changes the page, not the
- * news. A question whose account is gone has nobody to write to. Like the shop's own
+ * Once per answer, when it is first published: an answer edited later changes the page, not the
+ * news. A question whose account is gone has nobody to write to; an author who followed the
+ * unsubscribe link of an earlier mail is not written to again; an author answering their own
+ * question is not told about it. Every mail carries that link, signed and dated. Like the shop's own
  * notification, a mail that cannot leave is logged and never fails the moderator's action.
  */
 final readonly class ProductQuestionCustomerNotifier implements EventSubscriberInterface
@@ -38,6 +41,7 @@ final readonly class ProductQuestionCustomerNotifier implements EventSubscriberI
         private ProductTitleSourceInterface $productTitles,
         private ShopContextInterface $shop,
         private LoggerInterface $logger,
+        private ProductQuestionUnsubscribeLink $unsubscribeLink,
     ) {
     }
 
@@ -66,12 +70,16 @@ final readonly class ProductQuestionCustomerNotifier implements EventSubscriberI
             return;
         }
 
+        if (false === $question->getNotifyAuthor() || $answer->getCustomerId() === $customerId) {
+            return;
+        }
+
         $locale = (string) $question->getLocale();
         $productId = (int) $question->getProductId();
 
         try {
             $this->mailer->sendToCustomer(
-                ProductQuestionModule::MESSAGE_CUSTOMER_ANSWERED,
+                $answer->isOfficialAnswer() ? ProductQuestionModule::MESSAGE_CUSTOMER_ANSWERED : ProductQuestionModule::MESSAGE_CUSTOMER_ANSWERED_BY_CUSTOMER,
                 $customerId,
                 $locale,
                 $this->notification->parameters(
@@ -81,6 +89,8 @@ final readonly class ProductQuestionCustomerNotifier implements EventSubscriberI
                     $this->productTitles->titleFor($productId, $locale),
                     $this->shop->productUrl($productId, $locale),
                     $locale,
+                    $answer->isOfficialAnswer(),
+                    $this->unsubscribeLink->urlFor($questionId),
                 ),
             );
         } catch (\Throwable $exception) {

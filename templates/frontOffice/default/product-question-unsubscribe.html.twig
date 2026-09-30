@@ -1,0 +1,24 @@
+{# Rendered by ProductQuestion\Controller\Front\ProductQuestionUnsubscribeController, inside the
+   shop's layout. Every string arrives translated: Twig's |trans on the front office knows the
+   theme catalogue only. #}
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ labels.title }}{% endblock %}
+
+{% block body %}
+    <div class="container-s pt-8 pb-14 lg:pt-12 lg:pb-30" data-testid="product-question-unsubscribe" data-state="{{ state }}">
+        <h1 class="mb-4 h2">{{ labels.title }}</h1>
+
+        {% if state == 'confirm' %}
+            <p class="mb-6 paragraph-2">{{ labels.confirm }}</p>
+            <form method="post" action="{{ path('productquestion_unsubscribe', {id: link.id}) }}">
+                <input type="hidden" name="expires" value="{{ link.expires }}">
+                <input type="hidden" name="signature" value="{{ link.signature }}">
+                <twig:Molecules:Button:Base text="{{ labels.button }}" type="submit" data-testid="product-question-unsubscribe-submit" />
+            </form>
+        {% else %}
+            <p class="mb-6 paragraph-2" role="status">{{ attribute(labels, state) }}</p>
+            <twig:Molecules:Button:Base text="{{ labels.home }}" tag="a" href="{{ path('index') }}" icon_left="chevron-left" />
+        {% endif %}
+    </div>
+{% endblock %}

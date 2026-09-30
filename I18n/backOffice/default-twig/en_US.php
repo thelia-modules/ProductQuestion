@@ -69,4 +69,7 @@ return [
     'Let customers answer the published questions' => 'Let customers answer the published questions',
     'Their answers wait for your approval before they appear on the product page.' => 'Their answers wait for your approval before they appear on the product page.',
     'Save the settings' => 'Save the settings',
+    'Emails to the author about new answers' => 'Emails to the author about new answers',
+    'On' => 'On',
+    'Stopped by the author' => 'Stopped by the author',
 ];

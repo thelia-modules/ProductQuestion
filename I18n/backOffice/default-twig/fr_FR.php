@@ -69,4 +69,7 @@ return [
     'Let customers answer the published questions' => 'Autoriser les clients à répondre aux questions publiées',
     'Their answers wait for your approval before they appear on the product page.' => 'Leurs réponses attendent votre validation avant d’apparaître sur la fiche produit.',
     'Save the settings' => 'Enregistrer les réglages',
+    'Emails to the author about new answers' => 'Courriels à l’auteur à chaque nouvelle réponse',
+    'On' => 'Activés',
+    'Stopped by the author' => 'Arrêtés par l’auteur',
 ];

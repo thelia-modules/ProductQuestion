@@ -32,8 +32,9 @@ final class ProductQuestionAnswerNotificationTest extends TestCase
             'answer' => 'Oui, compatible.',
             'productTitle' => 'Horatio',
             'productUrl' => 'https://shop.test/horatio-1.html',
+            'unsubscribeUrl' => '',
         ], $parameters['question']);
-        self::assertSame(['subject', 'heading', 'intro', 'answer', 'link', 'linkWithUrl', 'outro'], array_keys($parameters['labels']));
+        self::assertSame(['subject', 'heading', 'intro', 'answer', 'link', 'linkWithUrl', 'outro', 'unsubscribe', 'unsubscribeWithUrl'], array_keys($parameters['labels']));
 
         // Every string in the module's email catalogue, in the language of the question.
         foreach ($translator->calls as $call) {

@@ -45,4 +45,9 @@ final class FixedShopContext implements ShopContextInterface
     {
         return 'https://shop.test/admin/products/update?product_id='.$productId;
     }
+
+    public function publicUrl(string $path, array $parameters = []): string
+    {
+        return 'https://shop.test'.$path.([] === $parameters ? '' : '?'.http_build_query($parameters));
+    }
 }
