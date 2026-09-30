@@ -33,9 +33,8 @@ class ProductQuestion
     protected ?string $locale = null;
     protected ?string $content = null;
     protected ?int $status = 0;
-    protected ?string $answer = null;
-    protected string|int|\DateTimeInterface|null $answered_at = null;
-    protected ?int $answered_by = null;
+    protected ?int $helpful_count = 0;
+    protected ?bool $notify_author = true;
     protected string|int|\DateTimeInterface|null $created_at = null;
     protected string|int|\DateTimeInterface|null $updated_at = null;
 
@@ -121,38 +120,26 @@ class ProductQuestion
         return $this;
     }
 
-    public function getAnswer(): ?string
+    public function getHelpfulCount(): ?int
     {
-        return $this->answer;
+        return $this->helpful_count;
     }
 
-    public function setAnswer(?string $v = null): static
+    public function setHelpfulCount(?int $v = null): static
     {
-        $this->answer = $v;
+        $this->helpful_count = $v;
 
         return $this;
     }
 
-    public function getAnsweredAt(?string $format = null): string|\DateTimeInterface|null
+    public function getNotifyAuthor(): ?bool
     {
-        return $this->formatDate($this->answered_at, $format);
+        return $this->notify_author;
     }
 
-    public function setAnsweredAt(string|int|\DateTimeInterface|null $v = null): static
+    public function setNotifyAuthor(?bool $v = null): static
     {
-        $this->answered_at = $v;
-
-        return $this;
-    }
-
-    public function getAnsweredBy(): ?int
-    {
-        return $this->answered_by;
-    }
-
-    public function setAnsweredBy(?int $v = null): static
-    {
-        $this->answered_by = $v;
+        $this->notify_author = $v;
 
         return $this;
     }

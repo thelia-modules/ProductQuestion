@@ -23,7 +23,7 @@ use ProductQuestion\Service\BackOffice\ProductQuestionListFilters;
  *
  * It answers the same questions ProductQuestionRepository answers, including the two rules
  * the Propel queries carry and that a test has to be able to break: the front office reads
- * answered questions only, and only in the language it asked for.
+ * published questions only, and only in the language it asked for.
  */
 final class InMemoryProductQuestionStorage implements ProductQuestionStorageInterface
 {
@@ -34,7 +34,7 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
     public array $deleted = [];
 
     /** @var list<array{offset: int, limit: int}> */
-    public array $answeredPageCalls = [];
+    public array $publishedPageCalls = [];
 
     private int $nextId = 1;
 
@@ -64,7 +64,7 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
     /**
      * @return list<ProductQuestion>
      */
-    public function findAnsweredForProduct(int $productId, string $locale): array
+    public function findPublishedForProduct(int $productId, string $locale): array
     {
         $found = [];
 
@@ -77,12 +77,15 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
                 continue;
             }
 
-            if (ProductQuestionStatus::Answered !== $question->getStatusEnum()) {
+            if (ProductQuestionStatus::Published !== $question->getStatusEnum()) {
                 continue;
             }
 
             $found[] = $question;
         }
+
+        // The most helpful first, as the repository orders them; stable otherwise.
+        usort($found, static fn (ProductQuestion $a, ProductQuestion $b): int => (int) $b->getHelpfulCount() <=> (int) $a->getHelpfulCount());
 
         return $found;
     }
@@ -90,11 +93,11 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
     /**
      * @return array{items: list<ProductQuestion>, total: int}
      */
-    public function findAnsweredForProductPage(int $productId, string $locale, int $offset, int $limit): array
+    public function findPublishedForProductPage(int $productId, string $locale, int $offset, int $limit): array
     {
-        $this->answeredPageCalls[] = ['offset' => $offset, 'limit' => $limit];
+        $this->publishedPageCalls[] = ['offset' => $offset, 'limit' => $limit];
 
-        $all = $this->findAnsweredForProduct($productId, $locale);
+        $all = $this->findPublishedForProduct($productId, $locale);
 
         return ['items' => \array_slice($all, $offset, $limit), 'total' => \count($all)];
     }

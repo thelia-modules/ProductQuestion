@@ -37,7 +37,7 @@ final readonly class ProductQuestionStatusCatalog
     {
         return [
             ProductQuestionStatus::Pending->value => $this->entry(ProductQuestionStatus::Pending, 'Pending', 'secondary'),
-            ProductQuestionStatus::Answered->value => $this->entry(ProductQuestionStatus::Answered, 'Answered', 'success'),
+            ProductQuestionStatus::Published->value => $this->entry(ProductQuestionStatus::Published, 'Published', 'success'),
             ProductQuestionStatus::Refused->value => $this->entry(ProductQuestionStatus::Refused, 'Refused', 'danger'),
         ];
     }

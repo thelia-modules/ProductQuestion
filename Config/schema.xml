@@ -8,9 +8,12 @@
         <column name="locale" required="true" size="10" type="VARCHAR" />
         <column name="content" required="true" type="CLOB" />
         <column name="status" default="0" required="true" type="TINYINT" />
-        <column name="answer" type="CLOB" />
-        <column name="answered_at" type="TIMESTAMP" />
-        <column name="answered_by" type="INTEGER" />
+        <!-- The helpful votes of the question's published answers, summed. Kept on the row so
+             that the product page orders its questions without counting votes. -->
+        <column name="helpful_count" default="0" required="true" type="INTEGER" />
+        <!-- Whether the author still wants to hear about new answers. Turned off by the signed
+             link every answer mail carries. -->
+        <column name="notify_author" defaultValue="true" required="true" type="BOOLEAN" />
 
         <behavior name="timestampable" />
 
@@ -20,19 +23,14 @@
         <foreign-key foreignTable="product" name="fk_product_question_product_id" onDelete="CASCADE" onUpdate="RESTRICT">
             <reference foreign="id" local="product_id" />
         </foreign-key>
-        <!-- A published question and its answer stay on the product page when the customer
+        <!-- A published question and its answers stay on the product page when the customer
              account goes away. What is lost is who asked, which is the point. -->
         <foreign-key foreignTable="customer" name="fk_product_question_customer_id" onDelete="SET NULL" onUpdate="RESTRICT">
             <reference foreign="id" local="customer_id" />
         </foreign-key>
-        <!-- Same for the administrator who answered: removing their account must not remove
-             the answer the shop published. -->
-        <foreign-key foreignTable="admin" name="fk_product_question_answered_by" onDelete="SET NULL" onUpdate="RESTRICT">
-            <reference foreign="id" local="answered_by" />
-        </foreign-key>
 
-        <!-- The product page: the answered questions of one product in the visitor's
-             language. The only query the front office makes. -->
+        <!-- The product page: the published questions of one product in the visitor's
+             language. -->
         <index name="idx_product_question_product_status_locale">
             <index-column name="product_id" />
             <index-column name="status" />
@@ -43,6 +41,75 @@
             <index-column name="status" />
         </index>
         <index name="idx_product_question_customer_id">
+            <index-column name="customer_id" />
+        </index>
+    </table>
+
+    <table name="product_question_answer">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER" />
+        <column name="question_id" required="true" type="INTEGER" />
+        <!-- Who wrote it: an administrator for the shop's answer, a customer otherwise. Both
+             become null when the account goes; the answer stays. -->
+        <column name="customer_id" type="INTEGER" />
+        <column name="admin_id" type="INTEGER" />
+        <!-- The shop's own answer, shown first. One per question. -->
+        <column name="is_official" defaultValue="false" required="true" type="BOOLEAN" />
+        <column name="content" required="true" type="CLOB" />
+        <column name="status" default="0" required="true" type="TINYINT" />
+        <column name="helpful_count" default="0" required="true" type="INTEGER" />
+        <!-- When the answer was first published. Set once: this is what tells a first
+             publication, which the author of the question is told about, from a later one. -->
+        <column name="published_at" type="TIMESTAMP" />
+
+        <behavior name="timestampable" />
+
+        <foreign-key foreignTable="product_question" name="fk_product_question_answer_question_id" onDelete="CASCADE" onUpdate="RESTRICT">
+            <reference foreign="id" local="question_id" />
+        </foreign-key>
+        <foreign-key foreignTable="customer" name="fk_product_question_answer_customer_id" onDelete="SET NULL" onUpdate="RESTRICT">
+            <reference foreign="id" local="customer_id" />
+        </foreign-key>
+        <foreign-key foreignTable="admin" name="fk_product_question_answer_admin_id" onDelete="SET NULL" onUpdate="RESTRICT">
+            <reference foreign="id" local="admin_id" />
+        </foreign-key>
+
+        <!-- The answers of a page of questions, read in one query. -->
+        <index name="idx_product_question_answer_question_status">
+            <index-column name="question_id" />
+            <index-column name="status" />
+        </index>
+        <!-- The answers waiting for a moderator. -->
+        <index name="idx_product_question_answer_status">
+            <index-column name="status" />
+        </index>
+        <index name="idx_product_question_answer_customer_id">
+            <index-column name="customer_id" />
+        </index>
+    </table>
+
+    <table name="product_question_answer_vote">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER" />
+        <column name="answer_id" required="true" type="INTEGER" />
+        <!-- Null once the account is anonymized or deleted: the vote still counts, nobody can
+             tell who cast it. -->
+        <column name="customer_id" type="INTEGER" />
+
+        <behavior name="timestampable" />
+
+        <foreign-key foreignTable="product_question_answer" name="fk_product_question_answer_vote_answer_id" onDelete="CASCADE" onUpdate="RESTRICT">
+            <reference foreign="id" local="answer_id" />
+        </foreign-key>
+        <foreign-key foreignTable="customer" name="fk_product_question_answer_vote_customer_id" onDelete="SET NULL" onUpdate="RESTRICT">
+            <reference foreign="id" local="customer_id" />
+        </foreign-key>
+
+        <!-- One vote per customer and answer, held by the database rather than by a read
+             before the write: two clicks racing each other still count once. -->
+        <unique name="uq_product_question_answer_vote_answer_customer">
+            <unique-column name="answer_id" />
+            <unique-column name="customer_id" />
+        </unique>
+        <index name="idx_product_question_answer_vote_customer_id">
             <index-column name="customer_id" />
         </index>
     </table>

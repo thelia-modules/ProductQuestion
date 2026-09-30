@@ -29,9 +29,10 @@ use Symfony\Component\Validator\Constraints\NotBlank;
 /**
  * The questions of a product, for a front office that talks to the API rather than to Twig.
  *
- * What comes out is what a shop puts on a product page, built from answered questions only:
- * the question, the shop's answer and its date. Neither who asked nor who answered is ever
- * readable — the answer is the shop's, unsigned, and the list is public.
+ * What comes out is what a shop puts on a product page, built from published questions only:
+ * the question, its published answers (the shop's first, flagged official, then the most
+ * helpful), and for a client written against 1.2.0 the shop's answer and its date on their
+ * own. Neither who asked nor who answered is ever readable, and the list is public.
  *
  * Posting sits under /front/account, which the firewall locks to a signed-in customer, and
  * says so again in its own security rule: an operation without one is open by accident.
@@ -94,11 +95,20 @@ class ProductQuestion
     #[Length(min: ProductQuestionAsker::MINIMUM_LENGTH, max: ProductQuestionAsker::MAXIMUM_LENGTH, groups: [self::GROUP_FRONT_WRITE])]
     public ?string $content = null;
 
+    /** The shop's published answer, as in 1.2.0. Every published answer is in `answers`. */
     #[Groups([self::GROUP_FRONT_READ])]
     public ?string $answer = null;
 
     #[Groups([self::GROUP_FRONT_READ])]
     public ?string $answeredAt = null;
+
+    /**
+     * The published answers, the shop's first, then the most helpful.
+     *
+     * @var list<array{id: int, content: string, official: bool, helpfulCount: int, publishedAt: ?string}>
+     */
+    #[Groups([self::GROUP_FRONT_READ])]
+    public array $answers = [];
 
     /**
      * Whether the question is on the product page. False for the one that has just been

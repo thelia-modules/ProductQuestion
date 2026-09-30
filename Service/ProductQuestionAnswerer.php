@@ -16,18 +16,19 @@ namespace ProductQuestion\Service;
 use ProductQuestion\Event\ProductQuestionAnsweredEvent;
 use ProductQuestion\Exception\InvalidProductQuestionException;
 use ProductQuestion\Model\ProductQuestion;
+use ProductQuestion\Model\ProductQuestionAnswer;
 use ProductQuestion\Model\ProductQuestionStatus;
+use ProductQuestion\Repository\ProductQuestionAnswerStorageInterface;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
 use ProductQuestion\Service\Front\ProductQuestionTextSanitizer;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
- * Publishes an administrator's answer.
+ * Publishes the shop's own answer to a question: the official one, shown first.
  *
- * Answering is what puts a question on the product page, so the four columns that say so —
- * the answer, when it was written, who wrote it, and the status — are written together. A
- * later edit of the same answer goes through here too and moves the question back up the
- * product page.
+ * A question has one official answer. Writing it again rewrites that answer rather than adding
+ * a second one. The shop is the moderator, so its answer is published as it is written, and
+ * publishing it puts the question on the product page as well.
  */
 final readonly class ProductQuestionAnswerer
 {
@@ -35,12 +36,13 @@ final readonly class ProductQuestionAnswerer
 
     public function __construct(
         private ProductQuestionStorageInterface $storage,
+        private ProductQuestionAnswerStorageInterface $answers,
         private ProductQuestionTextSanitizer $sanitizer,
         private EventDispatcherInterface $dispatcher,
     ) {
     }
 
-    public function answer(ProductQuestion $question, ?string $answer, int $adminId): ProductQuestion
+    public function answer(ProductQuestion $question, ?string $answer, int $adminId): ProductQuestionAnswer
     {
         $clean = $this->sanitizer->sanitize($answer);
 
@@ -52,23 +54,38 @@ final readonly class ProductQuestionAnswerer
             throw InvalidProductQuestionException::answerTooLong(self::MAXIMUM_LENGTH);
         }
 
-        // Read before the answer is written: this is what tells a first publication from an
-        // edit. The answer, not the status — a refusal keeps the answer, so a question refused
-        // and published again has already been announced to its customer.
-        $firstAnswer = null === $question->getAnswer() || '' === $question->getAnswer();
+        $questionId = (int) $question->getId();
+        $official = $this->answers->findOfficialForQuestion($questionId) ?? (new ProductQuestionAnswer())
+            ->setQuestionId($questionId)
+            ->setIsOfficial(true);
 
-        $question
-            ->setAnswer($clean)
-            ->setAnsweredAt(new \DateTimeImmutable())
-            // The column is nullable and set to null when the account goes: an answer written
-            // by an administrator who has left stays on the page without an author.
-            ->setAnsweredBy($adminId > 0 ? $adminId : null)
-            ->setStatusEnum(ProductQuestionStatus::Answered);
+        // Read before anything is written: the date of the first publication, not the status,
+        // tells a first answer from an edit. A refused question keeps its answer, so one refused
+        // and published again has already been announced to its author.
+        $firstPublication = null === $official->getPublishedAt();
 
-        $this->storage->save($question);
+        $official
+            ->setContent($clean)
+            // Nullable, and set to null when the account goes: an answer written by an
+            // administrator who has left stays on the page without an author.
+            ->setAdminId($adminId > 0 ? $adminId : null)
+            ->setStatusEnum(ProductQuestionStatus::Published);
 
-        $this->dispatcher->dispatch(new ProductQuestionAnsweredEvent($question, $firstAnswer));
+        if ($firstPublication) {
+            $official->setPublishedAt(new \DateTimeImmutable());
+        }
 
-        return $question;
+        $this->answers->save($official);
+
+        if (!$question->isPublished()) {
+            $question->setStatusEnum(ProductQuestionStatus::Published);
+            $this->storage->save($question);
+        }
+
+        $this->answers->refreshQuestionHelpfulCount($questionId);
+
+        $this->dispatcher->dispatch(new ProductQuestionAnsweredEvent($question, $firstPublication, $official));
+
+        return $official;
     }
 }

@@ -16,9 +16,9 @@ namespace ProductQuestion\Twig;
 use ProductQuestion\Exception\InvalidProductQuestionException;
 use ProductQuestion\Form\ProductQuestionAskForm;
 use ProductQuestion\ProductQuestion;
-use ProductQuestion\Service\Front\AnsweredQuestionsPresenter;
 use ProductQuestion\Service\Front\CurrentCustomerInterface;
 use ProductQuestion\Service\Front\ProductQuestionAskLimiter;
+use ProductQuestion\Service\Front\PublishedQuestionsPresenter;
 use ProductQuestion\Service\ProductQuestionAsker;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -65,7 +65,7 @@ class ProductQuestionBlock
         private readonly TheliaFormFactory $formFactory,
         private readonly ProductQuestionAsker $asker,
         private readonly ProductQuestionAskLimiter $askLimiter,
-        private readonly AnsweredQuestionsPresenter $presenter,
+        private readonly PublishedQuestionsPresenter $presenter,
         private readonly CurrentCustomerInterface $currentCustomer,
         // Thelia's own translator, the one carrying the module catalogues: Twig's |trans on
         // the front office knows the theme catalogue only.
@@ -81,7 +81,9 @@ class ProductQuestionBlock
         return [
             'title' => $this->trans('Customer questions'),
             'answer' => $this->trans('Answer from the shop'),
-            'empty' => $this->trans('No question has been answered about this product yet.'),
+            'customerAnswer' => $this->trans('Answer from a customer'),
+            'noAnswer' => $this->trans('No answer yet.'),
+            'empty' => $this->trans('No question has been published about this product yet.'),
             'ask' => $this->trans('Ask a question'),
             'send' => $this->trans('Send my question'),
             'signIn' => $this->trans('Sign in to ask a question about this product.'),
@@ -90,7 +92,7 @@ class ProductQuestionBlock
     }
 
     /**
-     * @return list<array{id: int, content: string, answer: string, answeredAt: ?\DateTimeInterface}>
+     * @return list<array{id: int, content: string, answers: list<array{id: int, content: string, official: bool, helpfulCount: int, publishedAt: ?\DateTimeInterface}>}>
      */
     public function getQuestions(): array
     {
@@ -141,7 +143,7 @@ class ProductQuestionBlock
             return;
         }
 
-        $this->feedback = $this->trans('Thank you! Your question has been sent to the shop and will appear here once answered.');
+        $this->feedback = $this->trans('Thank you! Your question has been sent to the shop and will appear here once published.');
 
         $this->resetForm();
     }

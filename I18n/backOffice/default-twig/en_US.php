@@ -13,7 +13,6 @@ declare(strict_types=1);
 
 return [
     'Pending' => 'Pending',
-    'Answered' => 'Answered',
     'Refused' => 'Refused',
     'Unknown' => 'Unknown',
 
@@ -58,4 +57,7 @@ return [
     'Refuse the question' => 'Refuse the question',
     'Delete' => 'Delete',
     'Answering a question' => 'Answering a question',
+    'Published' => 'Published',
+    'Answer from the shop' => 'Answer from the shop',
+    'Found helpful by %count% customer(s)' => 'Found helpful by %count% customer(s)',
 ];

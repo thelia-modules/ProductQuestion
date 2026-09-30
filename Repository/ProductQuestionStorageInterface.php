@@ -29,7 +29,7 @@ interface ProductQuestionStorageInterface
     public function findById(int $id): ?ProductQuestion;
 
     /**
-     * The answered questions of one product, in one language, most recently answered first.
+     * The published questions of one product, in one language, the most helpful first.
      *
      * Neither the status nor the language is optional. This is what a visitor may read, and
      * the front office reads nothing else: a pending or refused question must never become
@@ -37,7 +37,7 @@ interface ProductQuestionStorageInterface
      *
      * @return list<ProductQuestion>
      */
-    public function findAnsweredForProduct(int $productId, string $locale): array;
+    public function findPublishedForProduct(int $productId, string $locale): array;
 
     /**
      * One page of the same list, and how many rows it has in total: what the public API serves,
@@ -45,7 +45,7 @@ interface ProductQuestionStorageInterface
      *
      * @return array{items: list<ProductQuestion>, total: int}
      */
-    public function findAnsweredForProductPage(int $productId, string $locale, int $offset, int $limit): array;
+    public function findPublishedForProductPage(int $productId, string $locale, int $offset, int $limit): array;
 
     /**
      * Every question one customer asked, whatever its status, oldest first: what a personal

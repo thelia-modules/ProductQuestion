@@ -17,6 +17,7 @@ use ProductQuestion\Exception\InvalidProductQuestionException;
 use ProductQuestion\Form\ProductQuestionAnswerForm;
 use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\ProductQuestion as ProductQuestionModule;
+use ProductQuestion\Repository\ProductQuestionAnswerStorageInterface;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
 use ProductQuestion\Service\BackOffice\ProductQuestionEditPresenter;
 use ProductQuestion\Service\BackOffice\ProductQuestionListFilters;
@@ -51,6 +52,7 @@ class ProductQuestionController extends BaseAdminController
         private readonly ProductQuestionEditPresenter $editPresenter,
         private readonly ProductQuestionAnswerer $answerer,
         private readonly ProductQuestionRefuser $refuser,
+        private readonly ProductQuestionAnswerStorageInterface $answers,
     ) {
     }
 
@@ -89,7 +91,9 @@ class ProductQuestionController extends BaseAdminController
     {
         // On the error path the submitted form is handed back rather than rebuilt, so what a
         // moderator typed is still in the textarea next to the message telling them why.
-        $form ??= $this->createForm(ProductQuestionAnswerForm::getName(), data: ['answer' => $question->getAnswer()]);
+        $form ??= $this->createForm(ProductQuestionAnswerForm::getName(), data: [
+            'answer' => $this->answers->findOfficialForQuestion((int) $question->getId())?->getContent(),
+        ]);
 
         return $this->render('product-question-edit', [
             ...$this->editPresenter->present($question, $request->getLocale()),

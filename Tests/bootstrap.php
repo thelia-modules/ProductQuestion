@@ -72,3 +72,4 @@ spl_autoload_register(static function (string $class) use ($moduleDir): void {
  *    wins over a generated tree that may or may not be in the include path.
  */
 require __DIR__.'/Double/PropelBase/ProductQuestion.php';
+require __DIR__.'/Double/PropelBase/ProductQuestionAnswer.php';

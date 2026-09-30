@@ -39,8 +39,8 @@ final class CustomerPersonalDataTest extends IntegrationTestCase
         $export = $this->getService(CustomerPersonalDataExporter::class)->export($customer);
 
         self::assertArrayHasKey('product_question', $export);
-        self::assertSame([$question->getId()], array_column($export['product_question'], 'id'));
-        self::assertSame('Is the frame made of oak?', $export['product_question'][0]['content']);
+        self::assertSame([$question->getId()], array_column($export['product_question']['questions'], 'id'));
+        self::assertSame('Is the frame made of oak?', $export['product_question']['questions'][0]['content']);
     }
 
     public function testAnonymizingTheCustomerCutsTheLinkAndKeepsTheQuestion(): void

@@ -14,13 +14,16 @@ declare(strict_types=1);
 namespace ProductQuestion\Service\BackOffice;
 
 use ProductQuestion\Model\ProductQuestion;
+use ProductQuestion\Model\ProductQuestionAnswer;
+use ProductQuestion\Repository\ProductQuestionAnswerStorageInterface;
 use ProductQuestion\Repository\ProductTitleSourceInterface;
 use ProductQuestion\Service\Notification\ShopContextInterface;
 
 /**
- * Shapes the screen of one question for Twig, as ProductQuestionListPresenter does the list.
+ * Shapes the screen of one question for Twig, as ProductQuestionListPresenter does the list:
+ * the question, the shop's answer, and the answers customers wrote, each with its status.
  *
- * The form and the session token stay with the controller: they belong to the request.
+ * The forms and the session token stay with the controller: they belong to the request.
  */
 final readonly class ProductQuestionEditPresenter
 {
@@ -28,6 +31,7 @@ final readonly class ProductQuestionEditPresenter
         private ProductQuestionStatusCatalog $statusCatalog,
         private ProductTitleSourceInterface $productTitles,
         private ShopContextInterface $shop,
+        private ProductQuestionAnswerStorageInterface $answers,
     ) {
     }
 
@@ -38,12 +42,27 @@ final readonly class ProductQuestionEditPresenter
      *     customerUrl: ?string,
      *     productUrl: string,
      *     productTitle: ?string,
+     *     officialAnswer: ?array<string, mixed>,
+     *     customerAnswers: list<array<string, mixed>>,
      * }
      */
     public function present(ProductQuestion $question, string $uiLocale): array
     {
         $customerId = $question->getCustomerId();
         $productId = (int) $question->getProductId();
+
+        $official = null;
+        $customerAnswers = [];
+
+        foreach ($this->answers->findForQuestion((int) $question->getId()) as $answer) {
+            if ($answer->isOfficialAnswer() && null === $official) {
+                $official = $this->answer($answer);
+
+                continue;
+            }
+
+            $customerAnswers[] = $this->answer($answer);
+        }
 
         return [
             'question' => $question,
@@ -55,6 +74,27 @@ final readonly class ProductQuestionEditPresenter
             'customerUrl' => null === $customerId ? null : $this->shop->customerAdminUrl($customerId),
             'productUrl' => $this->shop->productAdminUrl($productId),
             'productTitle' => $this->productTitles->titleFor($productId, $uiLocale),
+            'officialAnswer' => $official,
+            'customerAnswers' => $customerAnswers,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function answer(ProductQuestionAnswer $answer): array
+    {
+        $customerId = $answer->getCustomerId();
+
+        return [
+            'id' => (int) $answer->getId(),
+            'content' => (string) $answer->getContent(),
+            'official' => $answer->isOfficialAnswer(),
+            'status' => $this->statusCatalog->get($answer->getStatus()),
+            'helpfulCount' => (int) $answer->getHelpfulCount(),
+            'publishedAt' => $answer->getPublishedAt(),
+            'createdAt' => $answer->getCreatedAt(),
+            'customerUrl' => null === $customerId ? null : $this->shop->customerAdminUrl($customerId),
         ];
     }
 }

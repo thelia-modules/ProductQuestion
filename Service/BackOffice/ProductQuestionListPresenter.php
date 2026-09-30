@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace ProductQuestion\Service\BackOffice;
 
 use ProductQuestion\Model\ProductQuestion;
+use ProductQuestion\Repository\ProductQuestionAnswerStorageInterface;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
 use ProductQuestion\Repository\ProductTitleSourceInterface;
 use ProductQuestion\Service\CustomerDisplayName;
@@ -33,6 +34,7 @@ final readonly class ProductQuestionListPresenter
         private ProductQuestionStorageInterface $storage,
         private ProductQuestionStatusCatalog $statusCatalog,
         private ProductTitleSourceInterface $productTitles,
+        private ProductQuestionAnswerStorageInterface $answers,
     ) {
     }
 
@@ -46,17 +48,22 @@ final readonly class ProductQuestionListPresenter
      *     statuses: array<int, array{value: int, label: string, css: string}>,
      *     counts: array<int, int>,
      *     locales: list<string>,
+     *     pendingAnswers: int,
      * }
      */
     public function present(ProductQuestionListFilters $filters, string $uiLocale): array
     {
         $page = $this->storage->searchForModeration($filters);
         $titles = $this->productTitles->titlesFor($this->productIds($page['items']), $uiLocale);
+        $pendingAnswers = $this->answers->countPendingByQuestion(array_map(
+            static fn (ProductQuestion $question): int => (int) $question->getId(),
+            $page['items'],
+        ));
 
         $rows = [];
 
         foreach ($page['items'] as $question) {
-            $rows[] = $this->row($question, $titles);
+            $rows[] = $this->row($question, $titles, $pendingAnswers[(int) $question->getId()] ?? 0);
         }
 
         return [
@@ -68,6 +75,7 @@ final readonly class ProductQuestionListPresenter
             'statuses' => $this->statusCatalog->all(),
             'counts' => $this->storage->countByStatus(),
             'locales' => $this->storage->findUsedLocales(),
+            'pendingAnswers' => $this->answers->countPending(),
         ];
     }
 
@@ -76,7 +84,7 @@ final readonly class ProductQuestionListPresenter
      *
      * @return array<string, mixed>
      */
-    private function row(ProductQuestion $question, array $titles): array
+    private function row(ProductQuestion $question, array $titles, int $pendingAnswers): array
     {
         $customer = $question->getCustomerId();
 
@@ -86,7 +94,8 @@ final readonly class ProductQuestionListPresenter
             'locale' => $question->getLocale(),
             'status' => $this->statusCatalog->get($question->getStatus()),
             'createdAt' => $question->getCreatedAt(),
-            'answeredAt' => $question->getAnsweredAt(),
+            // The customer answers of this question waiting for a moderator.
+            'pendingAnswers' => $pendingAnswers,
             'productId' => $question->getProductId(),
             'productTitle' => $titles[$question->getProductId()] ?? null,
             'customerId' => $customer,

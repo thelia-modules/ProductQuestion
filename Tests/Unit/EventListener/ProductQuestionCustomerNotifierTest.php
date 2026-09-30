@@ -17,6 +17,7 @@ use PHPUnit\Framework\TestCase;
 use ProductQuestion\Event\ProductQuestionAnsweredEvent;
 use ProductQuestion\EventListener\ProductQuestionCustomerNotifier;
 use ProductQuestion\Model\ProductQuestion;
+use ProductQuestion\Model\ProductQuestionAnswer;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\ProductQuestion as ProductQuestionModule;
 use ProductQuestion\Service\Notification\ProductQuestionAnswerNotification;
@@ -41,10 +42,23 @@ final class ProductQuestionCustomerNotifierTest extends TestCase
             ->setCustomerId($customerId)
             ->setLocale('fr_FR')
             ->setContent('Est-ce compatible ?')
-            ->setAnswer('Oui, compatible.')
-            ->setStatusEnum(ProductQuestionStatus::Answered);
+            ->setStatusEnum(ProductQuestionStatus::Published);
 
         return $question;
+    }
+
+    private function answered(ProductQuestion $question, bool $first, bool $official = true, ?int $authorId = null): ProductQuestionAnsweredEvent
+    {
+        $answer = (new ProductQuestionAnswer())
+            ->setId(8)
+            ->setQuestionId($question->getId())
+            ->setIsOfficial($official)
+            ->setAdminId($official ? 7 : null)
+            ->setCustomerId($authorId)
+            ->setContent('Oui, compatible.')
+            ->setStatusEnum(ProductQuestionStatus::Published);
+
+        return new ProductQuestionAnsweredEvent($question, $first, $answer);
     }
 
     private function notifier(SpyCustomerMailer $mailer, ?SpyLogger $logger = null): ProductQuestionCustomerNotifier
@@ -62,7 +76,7 @@ final class ProductQuestionCustomerNotifierTest extends TestCase
     {
         $mailer = new SpyCustomerMailer();
 
-        $this->notifier($mailer)->onQuestionAnswered(new ProductQuestionAnsweredEvent($this->question(), true));
+        $this->notifier($mailer)->onQuestionAnswered($this->answered($this->question(), true));
 
         self::assertCount(1, $mailer->sent);
         $sent = $mailer->sent[0];
@@ -75,11 +89,23 @@ final class ProductQuestionCustomerNotifierTest extends TestCase
         self::assertSame('Oui, compatible.', $sent['parameters']['question']['answer']);
     }
 
+    /**
+     * An event dispatched the 1.2.0 way, without the answer row, has nothing to announce.
+     */
+    public function testAnEventWithoutAnswerSendsNothing(): void
+    {
+        $mailer = new SpyCustomerMailer();
+
+        $this->notifier($mailer)->onQuestionAnswered(new ProductQuestionAnsweredEvent($this->question(), true));
+
+        self::assertSame([], $mailer->sent);
+    }
+
     public function testAnEditedAnswerIsNotAnnouncedAgain(): void
     {
         $mailer = new SpyCustomerMailer();
 
-        $this->notifier($mailer)->onQuestionAnswered(new ProductQuestionAnsweredEvent($this->question(), false));
+        $this->notifier($mailer)->onQuestionAnswered($this->answered($this->question(), false));
 
         self::assertSame([], $mailer->sent);
     }
@@ -88,7 +114,7 @@ final class ProductQuestionCustomerNotifierTest extends TestCase
     {
         $mailer = new SpyCustomerMailer();
 
-        $this->notifier($mailer)->onQuestionAnswered(new ProductQuestionAnsweredEvent($this->question(null), true));
+        $this->notifier($mailer)->onQuestionAnswered($this->answered($this->question(null), true));
 
         self::assertSame([], $mailer->sent);
     }
@@ -98,7 +124,7 @@ final class ProductQuestionCustomerNotifierTest extends TestCase
         $logger = new SpyLogger();
 
         $this->notifier(new SpyCustomerMailer(new \RuntimeException('no transport')), $logger)
-            ->onQuestionAnswered(new ProductQuestionAnsweredEvent($this->question(), true));
+            ->onQuestionAnswered($this->answered($this->question(), true));
 
         self::assertCount(1, $logger->records);
         self::assertStringContainsString('question 5', $logger->records[0]['message']);
@@ -115,7 +141,7 @@ final class ProductQuestionCustomerNotifierTest extends TestCase
         $refusal = new \RuntimeException('Expected response code "250" but got code "550", with message "550 5.1.1 <ada.lovelace@example.com>: Recipient address rejected".');
 
         $this->notifier(new SpyCustomerMailer($refusal), $logger)
-            ->onQuestionAnswered(new ProductQuestionAnsweredEvent($this->question(), true));
+            ->onQuestionAnswered($this->answered($this->question(), true));
 
         self::assertCount(1, $logger->records);
         self::assertStringContainsString('Recipient address rejected', $logger->records[0]['message']);

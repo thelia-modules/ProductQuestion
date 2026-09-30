@@ -22,15 +22,23 @@
             {% for question in questions %}
                 <li class="ProductQuestion-item" data-testid="product-question-item-{{ question.id }}">
                     <p class="ProductQuestion-question paragraph-2 text-black">{{ question.content|nl2br }}</p>
-                    <div class="ProductQuestion-answer">
-                        <p class="ProductQuestion-answerLabel paragraph-4 text-grey">
-                            {{ labels.answer }}
-                            {% if question.answeredAt %}
-                                <time datetime="{{ question.answeredAt|date('Y-m-d') }}">{{ question.answeredAt|date('d/m/Y') }}</time>
-                            {% endif %}
-                        </p>
-                        <p class="paragraph-3 text-black">{{ question.answer|nl2br }}</p>
-                    </div>
+                    {% if question.answers is not empty %}
+                        <ul class="ProductQuestion-answers">
+                            {% for answer in question.answers %}
+                                <li class="ProductQuestion-answer{{ answer.official ? ' ProductQuestion-answer--official' : '' }}" data-testid="product-question-answer-{{ answer.id }}">
+                                    <p class="ProductQuestion-answerLabel paragraph-4 text-grey">
+                                        {{ answer.official ? labels.answer : labels.customerAnswer }}
+                                        {% if answer.publishedAt %}
+                                            <time datetime="{{ answer.publishedAt|date('Y-m-d') }}">{{ answer.publishedAt|date('d/m/Y') }}</time>
+                                        {% endif %}
+                                    </p>
+                                    <p class="paragraph-3 text-black">{{ answer.content|nl2br }}</p>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="ProductQuestion-noAnswer paragraph-4 text-grey">{{ labels.noAnswer }}</p>
+                    {% endif %}
                 </li>
             {% endfor %}
         </ul>
