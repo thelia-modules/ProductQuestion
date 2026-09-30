@@ -90,4 +90,7 @@ return [
     'Delete the selection' => 'Delete the selection',
     'Delete the selected questions and their answers? This cannot be undone.' => 'Delete the selected questions and their answers? This cannot be undone.',
     '%count% question(s) processed.' => '%count% question(s) processed.',
+
+    'Questions per page on the product page' => 'Questions per page on the product page',
+    '0 shows every question on one page. Above that, a "Show more" link loads the next ones.' => '0 shows every question on one page. Above that, a "Show more" link loads the next ones.',
 ];

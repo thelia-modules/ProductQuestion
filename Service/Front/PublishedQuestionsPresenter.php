@@ -23,7 +23,8 @@ use ProductQuestion\Repository\ProductQuestionStorageInterface;
  * them.
  *
  * Two queries whatever the number of questions: the published questions of the product, then
- * the published answers of all of them at once.
+ * the published answers of all of them at once. A page of questions adds the count of them all,
+ * which the same index answers.
  *
  * Rows are turned into arrays here rather than handed to the template: the rows carry who asked
  * and who answered, and neither ever reaches the page. A column added to a table later cannot
@@ -38,18 +39,28 @@ final readonly class PublishedQuestionsPresenter
     }
 
     /**
-     * @return list<array{id: int, content: string, answers: list<array{id: int, content: string, official: bool, helpfulCount: int, publishedAt: ?\DateTimeInterface}>}>
+     * The first $limit published questions of the product, or all of them when $limit is 0, and
+     * how many there are in total: what the block needs to offer the next ones.
+     *
+     * @return array{questions: list<array{id: int, content: string, answers: list<array{id: int, content: string, official: bool, helpfulCount: int, publishedAt: ?\DateTimeInterface}>}>, total: int}
      */
-    public function forProduct(int $productId, string $locale): array
+    public function forProduct(int $productId, string $locale, int $limit = 0): array
     {
         if ($productId <= 0 || '' === $locale) {
-            return [];
+            return ['questions' => [], 'total' => 0];
         }
 
-        $questions = $this->storage->findPublishedForProduct($productId, $locale);
+        if ($limit > 0) {
+            $page = $this->storage->findPublishedForProductPage($productId, $locale, 0, $limit);
+            $questions = $page['items'];
+            $total = $page['total'];
+        } else {
+            $questions = $this->storage->findPublishedForProduct($productId, $locale);
+            $total = \count($questions);
+        }
 
         if ([] === $questions) {
-            return [];
+            return ['questions' => [], 'total' => $total];
         }
 
         $answers = $this->answers->findPublishedForQuestions(array_map(
@@ -57,17 +68,20 @@ final readonly class PublishedQuestionsPresenter
             $questions,
         ));
 
-        return array_map(
-            static fn (ProductQuestion $question): array => [
-                'id' => (int) $question->getId(),
-                'content' => (string) $question->getContent(),
-                'answers' => array_map(
-                    self::answer(...),
-                    $answers[(int) $question->getId()] ?? [],
-                ),
-            ],
-            $questions,
-        );
+        return [
+            'questions' => array_map(
+                static fn (ProductQuestion $question): array => [
+                    'id' => (int) $question->getId(),
+                    'content' => (string) $question->getContent(),
+                    'answers' => array_map(
+                        self::answer(...),
+                        $answers[(int) $question->getId()] ?? [],
+                    ),
+                ],
+                $questions,
+            ),
+            'total' => $total,
+        ];
     }
 
     /**

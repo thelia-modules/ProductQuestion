@@ -1,4 +1,4 @@
 {# The module styles its own block: nothing for the theme to import. #}
 <link rel="stylesheet" href="{{ module_asset('ProductQuestion', 'assets/product-question.css') }}">
 
-{{ component('ProductQuestion', {productId: productId, locale: locale}) }}
+{{ component('ProductQuestion', {productId: productId, locale: locale, page: page}) }}

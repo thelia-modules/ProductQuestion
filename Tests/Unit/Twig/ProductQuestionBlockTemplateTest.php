@@ -85,7 +85,7 @@ final class ProductQuestionBlockTemplateTest extends TestCase
 
     public function testTheHookMountsTheComponentWithTheProductAndTheLanguage(): void
     {
-        self::assertStringContainsString("component('ProductQuestion', {productId: productId, locale: locale})", $this->hookTemplate);
+        self::assertStringContainsString("component('ProductQuestion', {productId: productId, locale: locale, page: page})", $this->hookTemplate);
     }
 
     /**
@@ -98,5 +98,15 @@ final class ProductQuestionBlockTemplateTest extends TestCase
         self::assertMatchesRegularExpression('/public function canAnswer\(\): bool\s*\{[^}]*\$this->isOpen\(\)/', $this->component);
         self::assertMatchesRegularExpression('/\{% elseif not open %\}\s*<p class="ProductQuestion-closed/', $this->template);
         self::assertMatchesRegularExpression('/\{% if not open and questions is empty %\}\s*<section [^>]* hidden /', $this->template);
+    }
+
+    /**
+     * "Show more" is a link that works without JavaScript, drawn in place by the live action
+     * when there is some.
+     */
+    public function testShowMoreIsALinkAndALiveAction(): void
+    {
+        self::assertMatchesRegularExpression('/\{% if this\.hasMore %\}.*href="\?questions_page=\{\{ this\.nextPage \}\}#product-questions".*data-live-action-param="more"/s', $this->template);
+        self::assertMatchesRegularExpression('/#\[LiveAction\]\s*public function more\(\): void/', $this->component);
     }
 }

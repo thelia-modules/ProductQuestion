@@ -55,12 +55,21 @@ class ProductQuestionBlock
     use ComponentToolsTrait;
     use ComponentWithFormTrait;
     use DefaultActionTrait;
+    /** Pages shown at most by "Show more", which bounds the one query of the list. */
+    public const MAXIMUM_PAGE = 50;
 
     #[LiveProp]
     public int $productId = 0;
 
     #[LiveProp]
     public string $locale = '';
+
+    /**
+     * How many pages of questions are shown, the first included. Raised by "Show more", and set
+     * on mount from the link of the same name for a visitor without JavaScript.
+     */
+    #[LiveProp]
+    public int $page = 1;
 
     /** Set after a successful post; a form error would be lost, the props are rehydrated. */
     #[LiveProp]
@@ -95,6 +104,9 @@ class ProductQuestionBlock
 
     /** Read once per render: the template asks through canAsk() and canAnswer() both. */
     private ?bool $open = null;
+
+    /** @var array{questions: list<array<string, mixed>>, total: int}|null */
+    private ?array $published = null;
 
     public function __construct(
         private readonly TheliaFormFactory $formFactory,
@@ -135,15 +147,38 @@ class ProductQuestionBlock
             'helpful' => $this->trans('This answer helped me'),
             'helpfulCount' => $this->trans('%count% customer(s) found this helpful'),
             'closed' => $this->trans('This product no longer takes questions.'),
+            'more' => $this->trans('Show more questions'),
         ];
     }
 
     /**
-     * @return list<array{id: int, content: string, answers: list<array{id: int, content: string, official: bool, helpfulCount: int, publishedAt: ?\DateTimeInterface}>}>
+     * @return list<array<string, mixed>>
      */
     public function getQuestions(): array
     {
-        return $this->presenter->forProduct($this->productId, $this->locale);
+        return $this->published()['questions'];
+    }
+
+    /**
+     * Whether there are published questions past the ones shown.
+     */
+    public function hasMore(): bool
+    {
+        return $this->perPage() > 0 && $this->published()['total'] > $this->shownLimit();
+    }
+
+    /**
+     * The next page, for the link a visitor without JavaScript follows.
+     */
+    public function getNextPage(): int
+    {
+        return $this->currentPage() + 1;
+    }
+
+    #[LiveAction]
+    public function more(): void
+    {
+        $this->page = $this->currentPage() + 1;
     }
 
     /**
@@ -312,6 +347,31 @@ class ProductQuestionBlock
     protected function instantiateForm(): FormInterface
     {
         return $this->formFactory->createForm(ProductQuestionAskForm::getName())->getForm();
+    }
+
+    /**
+     * @return array{questions: list<array<string, mixed>>, total: int}
+     */
+    private function published(): array
+    {
+        return $this->published ??= $this->presenter->forProduct($this->productId, $this->locale, $this->shownLimit());
+    }
+
+    private function perPage(): int
+    {
+        return $this->settings->questionsPerPage();
+    }
+
+    /** 0 when the shop shows every question on one page. */
+    private function shownLimit(): int
+    {
+        return $this->perPage() * $this->currentPage();
+    }
+
+    /** The page prop is a number anyone can put in the link: kept to what exists. */
+    private function currentPage(): int
+    {
+        return max(1, min($this->page, self::MAXIMUM_PAGE));
     }
 
     private function trans(string $key): string

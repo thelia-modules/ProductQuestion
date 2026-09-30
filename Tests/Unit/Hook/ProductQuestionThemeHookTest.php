@@ -30,7 +30,7 @@ use Twig\TwigFunction;
  */
 final class ProductQuestionThemeHookTest extends TestCase
 {
-    private function hook(string $locale = 'fr_FR'): ProductQuestionThemeHook
+    private function hook(string $locale = 'fr_FR', string $uri = '/'): ProductQuestionThemeHook
     {
         $loader = new FilesystemLoader();
         $loader->addPath(\dirname(__DIR__, 3).'/templates', 'ProductQuestionModule');
@@ -42,7 +42,7 @@ final class ProductQuestionThemeHookTest extends TestCase
         $requestStack = new RequestStack();
 
         if ('' !== $locale) {
-            $request = Request::create('/');
+            $request = Request::create($uri);
             $request->setLocale($locale);
             $requestStack->push($request);
         }
@@ -65,8 +65,8 @@ final class ProductQuestionThemeHookTest extends TestCase
     {
         $html = $this->hook()->render('product.bottom', ['product' => ['id' => 12]]);
 
-        self::assertStringContainsString('ProductQuestion:{"productId":12,"locale":"fr_FR"}', $html);
-        self::assertStringContainsString('ProductQuestion:{"productId":12,"locale":"en_US"}', $this->hook('en_US')->render('product.bottom', ['product' => ['id' => 12]]));
+        self::assertStringContainsString('ProductQuestion:{"productId":12,"locale":"fr_FR","page":1}', $html);
+        self::assertStringContainsString('ProductQuestion:{"productId":12,"locale":"en_US","page":1}', $this->hook('en_US')->render('product.bottom', ['product' => ['id' => 12]]));
     }
 
     public function testTheModuleStylesheetIsLinkedByTheHook(): void
@@ -100,5 +100,18 @@ final class ProductQuestionThemeHookTest extends TestCase
     public function testNoRequestMeansNoBlock(): void
     {
         self::assertSame('', $this->hook('')->render('product.bottom', ['product' => ['id' => 12]]));
+    }
+
+    /**
+     * The "Show more" link of a visitor without JavaScript lands here as a query parameter; what
+     * is not a number is page 1.
+     */
+    public function testTheShownPagesComeFromTheShowMoreLink(): void
+    {
+        self::assertStringContainsString('"page":3', $this->hook('fr_FR', '/?questions_page=3')->render('product.bottom', ['product' => ['id' => 12]]));
+
+        foreach (['/?questions_page=abc', '/?questions_page[]=2', '/?questions_page=-4', '/?questions_page=0'] as $uri) {
+            self::assertStringContainsString('"page":1', $this->hook('fr_FR', $uri)->render('product.bottom', ['product' => ['id' => 12]]), $uri);
+        }
     }
 }

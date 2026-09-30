@@ -19,6 +19,10 @@ final readonly class ModuleConfigProductQuestionSettings implements ProductQuest
 {
     public const ALLOW_CUSTOMER_ANSWERS = 'allow_customer_answers';
     public const QUESTIONS_CLOSED = 'questions_closed';
+    public const QUESTIONS_PER_PAGE = 'questions_per_page';
+
+    /** A page larger than this is a page nobody reads, and a query nobody needs. */
+    public const MAXIMUM_PER_PAGE = 100;
 
     public function allowsCustomerAnswers(): bool
     {
@@ -39,5 +43,28 @@ final readonly class ModuleConfigProductQuestionSettings implements ProductQuest
     public function setQuestionsClosed(bool $closed): void
     {
         ProductQuestion::setConfigValue(self::QUESTIONS_CLOSED, $closed ? '1' : '0');
+    }
+
+    public function questionsPerPage(): int
+    {
+        return self::bounded(ProductQuestion::getConfigValue(self::QUESTIONS_PER_PAGE, '0'), self::MAXIMUM_PER_PAGE);
+    }
+
+    public function setQuestionsPerPage(int $perPage): void
+    {
+        ProductQuestion::setConfigValue(self::QUESTIONS_PER_PAGE, (string) self::bounded((string) $perPage, self::MAXIMUM_PER_PAGE));
+    }
+
+    /**
+     * A stored number read back between 0 and the maximum: a value typed by hand in the module
+     * configuration is not trusted to be one.
+     */
+    private static function bounded(?string $value, int $maximum): int
+    {
+        if (null === $value || !ctype_digit($value)) {
+            return 0;
+        }
+
+        return min($maximum, (int) $value);
     }
 }

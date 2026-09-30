@@ -67,7 +67,7 @@ final class PublishedQuestionsPresenterTest extends TestCase
             $this->answer(1, 1, ProductQuestionStatus::Published, 'Oui, compatible.', true),
         ]));
 
-        $rows = $presenter->forProduct(12, 'fr_FR');
+        $rows = $presenter->forProduct(12, 'fr_FR')['questions'];
 
         self::assertCount(1, $rows);
         self::assertSame('Est-ce compatible ?', $rows[0]['content']);
@@ -84,7 +84,7 @@ final class PublishedQuestionsPresenterTest extends TestCase
             $this->question(1, 12, 'fr_FR', ProductQuestionStatus::Published, 'Q ?'),
         ]), new InMemoryProductQuestionAnswerStorage());
 
-        self::assertSame([], $presenter->forProduct(12, 'fr_FR')[0]['answers']);
+        self::assertSame([], $presenter->forProduct(12, 'fr_FR')['questions'][0]['answers']);
     }
 
     /**
@@ -103,7 +103,7 @@ final class PublishedQuestionsPresenterTest extends TestCase
             $this->answer(5, 1, ProductQuestionStatus::Refused, 'Refusee', false, 9),
         ]));
 
-        $answers = $presenter->forProduct(12, 'fr_FR')[0]['answers'];
+        $answers = $presenter->forProduct(12, 'fr_FR')['questions'][0]['answers'];
 
         self::assertSame(['Boutique', 'Client utile', 'Client peu utile'], array_column($answers, 'content'));
         self::assertSame([true, false, false], array_column($answers, 'official'));
@@ -120,7 +120,7 @@ final class PublishedQuestionsPresenterTest extends TestCase
             $this->question(2, 12, 'fr_FR', ProductQuestionStatus::Published, 'Utile', 8),
         ]), new InMemoryProductQuestionAnswerStorage());
 
-        self::assertSame(['Utile', 'Peu utile'], array_column($presenter->forProduct(12, 'fr_FR'), 'content'));
+        self::assertSame(['Utile', 'Peu utile'], array_column($presenter->forProduct(12, 'fr_FR')['questions'], 'content'));
     }
 
     /**
@@ -134,7 +134,7 @@ final class PublishedQuestionsPresenterTest extends TestCase
             $this->answer(1, 1, ProductQuestionStatus::Published, 'R.', true),
         ]));
 
-        $rows = $presenter->forProduct(12, 'fr_FR');
+        $rows = $presenter->forProduct(12, 'fr_FR')['questions'];
 
         self::assertSame(['id', 'content', 'answers'], array_keys($rows[0]));
         self::assertSame(['id', 'content', 'official', 'helpfulCount', 'publishedAt'], array_keys($rows[0]['answers'][0]));
@@ -146,7 +146,30 @@ final class PublishedQuestionsPresenterTest extends TestCase
             $this->question(1, 12, 'fr_FR', ProductQuestionStatus::Published, 'Q ?'),
         ]), new InMemoryProductQuestionAnswerStorage());
 
-        self::assertSame([], $presenter->forProduct(0, 'fr_FR'));
-        self::assertSame([], $presenter->forProduct(12, ''));
+        self::assertSame(['questions' => [], 'total' => 0], $presenter->forProduct(0, 'fr_FR'));
+        self::assertSame(['questions' => [], 'total' => 0], $presenter->forProduct(12, ''));
+    }
+
+    /**
+     * A page of the list: the most helpful first, cut at the limit, with the count of them all.
+     */
+    public function testALimitCutsTheListAndTellsHowManyThereAre(): void
+    {
+        $storage = new InMemoryProductQuestionStorage([
+            $this->question(1, 12, 'fr_FR', ProductQuestionStatus::Published, 'Un', 1),
+            $this->question(2, 12, 'fr_FR', ProductQuestionStatus::Published, 'Deux', 3),
+            $this->question(3, 12, 'fr_FR', ProductQuestionStatus::Published, 'Trois', 2),
+            $this->question(4, 12, 'fr_FR', ProductQuestionStatus::Pending, 'En attente', 9),
+        ]);
+        $presenter = new PublishedQuestionsPresenter($storage, new InMemoryProductQuestionAnswerStorage());
+
+        $page = $presenter->forProduct(12, 'fr_FR', 2);
+
+        self::assertSame(['Deux', 'Trois'], array_column($page['questions'], 'content'));
+        self::assertSame(3, $page['total']);
+        self::assertSame([['offset' => 0, 'limit' => 2]], $storage->publishedPageCalls, 'One query for the page, from the first question.');
+
+        self::assertSame(3, $presenter->forProduct(12, 'fr_FR')['total'], 'No limit: every question, counted.');
+        self::assertCount(3, $presenter->forProduct(12, 'fr_FR')['questions']);
     }
 }

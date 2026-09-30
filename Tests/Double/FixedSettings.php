@@ -20,6 +20,7 @@ final class FixedSettings implements ProductQuestionSettingsInterface
     public function __construct(
         public bool $customerAnswers = false,
         public bool $closed = false,
+        public int $perPage = 0,
     ) {
     }
 
@@ -41,5 +42,15 @@ final class FixedSettings implements ProductQuestionSettingsInterface
     public function setQuestionsClosed(bool $closed): void
     {
         $this->closed = $closed;
+    }
+
+    public function questionsPerPage(): int
+    {
+        return $this->perPage;
+    }
+
+    public function setQuestionsPerPage(int $perPage): void
+    {
+        $this->perPage = $perPage;
     }
 }

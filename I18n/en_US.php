@@ -48,4 +48,6 @@ return [
     'Back to the shop' => 'Back to the shop',
 
     'This product no longer takes questions.' => 'This product no longer takes questions.',
+
+    'Show more questions' => 'Show more questions',
 ];
