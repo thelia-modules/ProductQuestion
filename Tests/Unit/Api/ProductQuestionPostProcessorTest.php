@@ -22,7 +22,10 @@ use ProductQuestion\Service\Api\ProductQuestionPayloadMapper;
 use ProductQuestion\Service\Front\ProductQuestionAskLimiter;
 use ProductQuestion\Service\Front\ProductQuestionTextSanitizer;
 use ProductQuestion\Service\ProductQuestionAsker;
+use ProductQuestion\Service\ProductQuestionAvailability;
 use ProductQuestion\Tests\Double\FixedCurrentCustomer;
+use ProductQuestion\Tests\Double\FixedSettings;
+use ProductQuestion\Tests\Double\InMemoryClosedProducts;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionStorage;
 use ProductQuestion\Tests\Double\InMemoryProductVisibility;
 use ProductQuestion\Tests\Double\RateLimiters;
@@ -44,9 +47,12 @@ final class ProductQuestionPostProcessorTest extends TestCase
 {
     private InMemoryProductQuestionStorage $storage;
 
+    private InMemoryClosedProducts $closedProducts;
+
     protected function setUp(): void
     {
         $this->storage = new InMemoryProductQuestionStorage();
+        $this->closedProducts = new InMemoryClosedProducts();
     }
 
     private function processor(?int $customerId, int $perProductLimit = 3, string $requestLocale = 'fr_FR'): ProductQuestionPostProcessor
@@ -57,7 +63,7 @@ final class ProductQuestionPostProcessorTest extends TestCase
         $requestStack->push($request);
 
         return new ProductQuestionPostProcessor(
-            new ProductQuestionAsker($this->storage, new ProductQuestionTextSanitizer(), new EventDispatcher(), new InMemoryProductVisibility([12])),
+            new ProductQuestionAsker($this->storage, new ProductQuestionTextSanitizer(), new EventDispatcher(), new InMemoryProductVisibility([12]), new ProductQuestionAvailability(new FixedSettings(), $this->closedProducts)),
             new ProductQuestionAskLimiter(
                 RateLimiters::slidingWindow('per_customer', 100),
                 RateLimiters::slidingWindow('per_product', $perProductLimit),
@@ -94,6 +100,23 @@ final class ProductQuestionPostProcessorTest extends TestCase
         self::assertFalse($result->published);
         self::assertNull($result->answer);
         self::assertSame('Est-ce compatible avec le modele 2024 ?', $result->content);
+    }
+
+    /**
+     * A closed product is a 403, not the 422 of a text the shop would refuse: the question may be
+     * fine, the product takes none.
+     */
+    public function testAQuestionAboutAClosedProductIsForbiddenAndNotStored(): void
+    {
+        $this->closedProducts->setClosed(12, true);
+
+        try {
+            $this->processor(42)->process($this->input(), new Post());
+            self::fail('A question about a closed product was accepted.');
+        } catch (AccessDeniedHttpException) {
+        }
+
+        self::assertSame([], $this->storage->saved);
     }
 
     public function testTheLanguageInTheBodyWinsOverTheRequests(): void

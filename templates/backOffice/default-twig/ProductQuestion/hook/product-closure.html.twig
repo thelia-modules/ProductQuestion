@@ -1,0 +1,17 @@
+{# The Modules tab of the product edit page, through product.tab-content: closes this product to
+   new questions and answers. Its own form, posted apart from the product's. #}
+{% set domain = 'productquestion.bo.default-twig' %}
+<form method="POST" action="{{ path('productquestion_module_product_closure', {productId: productId}) }}" data-testid="product-question-product-closure">
+    <input type="hidden" name="_token" value="{{ assignToken() }}">
+    <div class="form-check form-switch mb-2">
+        <input class="form-check-input" type="checkbox" role="switch" id="pq-product-closed" name="closed" value="1" {{ productClosed ? 'checked' : '' }} {{ canUpdate ? '' : 'disabled' }}>
+        <label class="form-check-label" for="pq-product-closed">{{ 'Close this product to new questions'|trans({}, domain) }}</label>
+    </div>
+    <p class="text-muted small mb-2">{{ 'The questions already published stay on the product page.'|trans({}, domain) }}</p>
+    {% if shopClosed %}
+        <p class="alert alert-warning small py-2 mb-2" data-testid="product-question-shop-closed">{{ 'Questions are closed on the whole shop for now, whatever this product says.'|trans({}, domain) }}</p>
+    {% endif %}
+    {% if canUpdate %}
+        <button type="submit" class="btn btn-sm btn-primary" data-testid="product-question-product-closure-save">{{ 'Save'|trans({}, domain) }}</button>
+    {% endif %}
+</form>

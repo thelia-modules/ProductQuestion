@@ -72,4 +72,11 @@ return [
     'Emails to the author about new answers' => 'Courriels à l’auteur à chaque nouvelle réponse',
     'On' => 'Activés',
     'Stopped by the author' => 'Arrêtés par l’auteur',
+
+    'Close the whole shop to new questions' => 'Fermer toute la boutique aux nouvelles questions',
+    'The questions already published stay on the product pages. A product can also be closed on its own, from the Modules tab of its edit page.' => 'Les questions déjà publiées restent sur les fiches produits. Un produit peut aussi être fermé seul, depuis l’onglet Modules de sa fiche.',
+    'Close this product to new questions' => 'Fermer ce produit aux nouvelles questions',
+    'The questions already published stay on the product page.' => 'Les questions déjà publiées restent sur la fiche produit.',
+    'Questions are closed on the whole shop for now, whatever this product says.' => 'Les questions sont fermées sur toute la boutique pour le moment, quel que soit le réglage de ce produit.',
+    'Save' => 'Enregistrer',
 ];

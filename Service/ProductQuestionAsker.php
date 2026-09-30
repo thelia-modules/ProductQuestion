@@ -15,6 +15,7 @@ namespace ProductQuestion\Service;
 
 use ProductQuestion\Event\ProductQuestionCreatedEvent;
 use ProductQuestion\Exception\InvalidProductQuestionException;
+use ProductQuestion\Exception\ProductQuestionsClosedException;
 use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
@@ -41,6 +42,7 @@ final readonly class ProductQuestionAsker
         private ProductQuestionTextSanitizer $sanitizer,
         private EventDispatcherInterface $dispatcher,
         private ProductVisibilityInterface $products,
+        private ProductQuestionAvailability $availability,
     ) {
     }
 
@@ -80,10 +82,16 @@ final readonly class ProductQuestionAsker
             throw InvalidProductQuestionException::questionTooLong(self::MAXIMUM_LENGTH);
         }
 
-        // Last, being the one rule that costs a query. Without it an unknown product reaches the
+        // Last, being the rules that cost a query. Without this one an unknown product reaches the
         // foreign key as a 500, and a product the shop keeps offline gets questions and mails.
         if (!$this->products->isVisible($productId)) {
             throw InvalidProductQuestionException::unknownProduct();
+        }
+
+        // The shop closed the product, or the whole shop, to new questions. The form is gone from
+        // the page already; this is what refuses a post that comes from anywhere else.
+        if (!$this->availability->isOpenFor($productId)) {
+            throw ProductQuestionsClosedException::forProduct($productId);
         }
 
         $question = new ProductQuestion();

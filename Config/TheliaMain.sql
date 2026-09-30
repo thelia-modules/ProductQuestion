@@ -106,5 +106,24 @@ CREATE TABLE `product_question_answer_vote`
         ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
+-- ---------------------------------------------------------------------
+-- product_question_closed_product
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `product_question_closed_product`;
+
+CREATE TABLE `product_question_closed_product`
+(
+    `product_id` INTEGER NOT NULL,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`product_id`),
+    CONSTRAINT `fk_product_question_closed_product_product_id`
+        FOREIGN KEY (`product_id`)
+        REFERENCES `product` (`id`)
+        ON UPDATE RESTRICT
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 # This restores the fkey checks, after having unset them earlier
 SET FOREIGN_KEY_CHECKS = 1;

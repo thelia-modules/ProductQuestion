@@ -46,4 +46,6 @@ return [
     'This link has expired. Use the link of a more recent email.' => 'Ce lien a expiré. Utilisez le lien d’un courriel plus récent.',
     'This link is not valid.' => 'Ce lien n’est pas valide.',
     'Back to the shop' => 'Retour à la boutique',
+
+    'This product no longer takes questions.' => 'Ce produit ne reçoit plus de nouvelles questions.',
 ];

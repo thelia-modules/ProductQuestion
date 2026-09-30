@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace ProductQuestion\Twig;
 
 use ProductQuestion\Exception\InvalidProductQuestionException;
+use ProductQuestion\Exception\ProductQuestionsClosedException;
 use ProductQuestion\Form\ProductQuestionAskForm;
 use ProductQuestion\ProductQuestion;
 use ProductQuestion\Service\Front\CurrentCustomerInterface;
@@ -21,6 +22,7 @@ use ProductQuestion\Service\Front\ProductQuestionAnswerLimiter;
 use ProductQuestion\Service\Front\ProductQuestionAskLimiter;
 use ProductQuestion\Service\Front\PublishedQuestionsPresenter;
 use ProductQuestion\Service\ProductQuestionAsker;
+use ProductQuestion\Service\ProductQuestionAvailability;
 use ProductQuestion\Service\ProductQuestionCustomerAnswerer;
 use ProductQuestion\Service\ProductQuestionHelpfulVoter;
 use ProductQuestion\Service\ProductQuestionSettingsInterface;
@@ -91,6 +93,9 @@ class ProductQuestionBlock
     #[LiveProp]
     public ?string $voteFeedback = null;
 
+    /** Read once per render: the template asks through canAsk() and canAnswer() both. */
+    private ?bool $open = null;
+
     public function __construct(
         private readonly TheliaFormFactory $formFactory,
         private readonly ProductQuestionAsker $asker,
@@ -104,6 +109,7 @@ class ProductQuestionBlock
         private readonly ProductQuestionAnswerLimiter $answerLimiter,
         private readonly ProductQuestionSettingsInterface $settings,
         private readonly ProductQuestionHelpfulVoter $voter,
+        private readonly ProductQuestionAvailability $availability,
     ) {
     }
 
@@ -128,6 +134,7 @@ class ProductQuestionBlock
             'cancel' => $this->trans('Cancel'),
             'helpful' => $this->trans('This answer helped me'),
             'helpfulCount' => $this->trans('%count% customer(s) found this helpful'),
+            'closed' => $this->trans('This product no longer takes questions.'),
         ];
     }
 
@@ -139,14 +146,23 @@ class ProductQuestionBlock
         return $this->presenter->forProduct($this->productId, $this->locale);
     }
 
+    /**
+     * Whether the product takes new questions and answers. The published ones are shown either
+     * way: closing stops what customers write, not what they read.
+     */
+    public function isOpen(): bool
+    {
+        return $this->open ??= $this->availability->isOpenFor($this->productId);
+    }
+
     public function canAsk(): bool
     {
-        return null !== $this->currentCustomer->id();
+        return $this->isOpen() && null !== $this->currentCustomer->id();
     }
 
     public function canAnswer(): bool
     {
-        return $this->settings->allowsCustomerAnswers() && null !== $this->currentCustomer->id();
+        return $this->settings->allowsCustomerAnswers() && null !== $this->currentCustomer->id() && $this->isOpen();
     }
 
     /**
@@ -231,6 +247,12 @@ class ProductQuestionBlock
             $this->answerFeedback = $this->trans('Your answer could not be sent. Please check it and try again.');
 
             return;
+        } catch (ProductQuestionsClosedException) {
+            // Closed between the render and the post.
+            $this->answerFeedback = $this->trans('This product no longer takes questions.');
+            $this->answeringQuestionId = null;
+
+            return;
         }
 
         $this->answerFeedbackIsError = false;
@@ -274,6 +296,10 @@ class ProductQuestionBlock
             // The form already carries the length rules; what remains is a text the sanitizer
             // emptied, which the customer cannot tell apart from an invalid one.
             $this->error = $this->trans('Your question could not be sent. Please check it and try again.');
+
+            return;
+        } catch (ProductQuestionsClosedException) {
+            $this->error = $this->trans('This product no longer takes questions.');
 
             return;
         }

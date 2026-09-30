@@ -18,6 +18,7 @@ use ProductQuestion\Form\ProductQuestionAnswerForm;
 use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Model\ProductQuestionAnswer;
 use ProductQuestion\ProductQuestion as ProductQuestionModule;
+use ProductQuestion\Repository\ClosedProductStorageInterface;
 use ProductQuestion\Repository\ProductQuestionAnswerStorageInterface;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
 use ProductQuestion\Service\BackOffice\ProductQuestionEditPresenter;
@@ -60,6 +61,7 @@ class ProductQuestionController extends BaseAdminController
         private readonly ProductQuestionPublisher $publisher,
         private readonly ProductQuestionAnswerModerator $answerModerator,
         private readonly ProductQuestionSettingsInterface $settings,
+        private readonly ClosedProductStorageInterface $closedProducts,
     ) {
     }
 
@@ -75,6 +77,7 @@ class ProductQuestionController extends BaseAdminController
         return $this->render('product-questions', [
             ...$this->listPresenter->present($filters, $request->getLocale()),
             'allowsCustomerAnswers' => $this->settings->allowsCustomerAnswers(),
+            'questionsClosed' => $this->settings->questionsClosed(),
             'csrfToken' => $this->tokenProvider->assignToken(),
         ]);
     }
@@ -214,10 +217,37 @@ class ProductQuestionController extends BaseAdminController
         }
 
         $allowed = '1' === $request->request->get('allow_customer_answers');
+        $closed = '1' === $request->request->get('questions_closed');
         $this->settings->setAllowsCustomerAnswers($allowed);
-        $this->log(AccessManager::UPDATE, \sprintf('Product question settings saved: customer answers %s', $allowed ? 'on' : 'off'));
+        $this->settings->setQuestionsClosed($closed);
+        $this->log(AccessManager::UPDATE, \sprintf(
+            'Product question settings saved: customer answers %s, questions %s',
+            $allowed ? 'on' : 'off',
+            $closed ? 'closed' : 'open',
+        ));
 
         return $this->backToList();
+    }
+
+    /**
+     * The switch of the product edit page's Modules tab. Back to that tab afterwards.
+     */
+    #[Route('/ProductQuestion/product/{productId}/closure', name: '_product_closure', requirements: ['productId' => '\d+'], methods: ['POST'])]
+    public function productClosureAction(Request $request, int $productId): Response
+    {
+        if (null !== $denied = $this->checkModuleAccess(AccessManager::UPDATE)) {
+            return $denied;
+        }
+
+        if (null !== $denied = $this->checkToken($request)) {
+            return $denied;
+        }
+
+        $closed = '1' === $request->request->get('closed');
+        $this->closedProducts->setClosed($productId, $closed);
+        $this->log(AccessManager::UPDATE, \sprintf('Questions %s on product %d', $closed ? 'closed' : 'opened', $productId));
+
+        return new RedirectResponse(URL::getInstance()->absoluteUrl('/admin/products/update', ['product_id' => $productId, 'current_tab' => 'modules']));
     }
 
     #[Route('/ProductQuestion/{id}/refuse', name: '_refuse', requirements: ['id' => '\d+'], methods: ['POST'])]

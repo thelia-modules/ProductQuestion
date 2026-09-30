@@ -6,6 +6,7 @@
 {% set labels = this.labels %}
 {% set questions = this.questions %}
 {% set canAnswer = this.canAnswer %}
+{% set open = this.open %}
 
 {# Geometry lives in the module's own stylesheet (assets/product-question.css, linked by the
    theme hook): utility classes only this module uses are not in the theme's Tailwind sources,
@@ -13,6 +14,11 @@
    colours, which are what makes the block look like the rest of the shop. #}
 {# No id of its own: the live component carries one already, and two id attributes on one
    element is invalid markup. #}
+{# Closed with nothing published: the page stays as it is without the module. A live component
+   still needs its root element, which is left empty and hidden. #}
+{% if not open and questions is empty %}
+<section {{ attributes.defaults({class: 'ProductQuestion'}) }} hidden data-testid="product-question-block-closed"></section>
+{% else %}
 <section {{ attributes.defaults({class: 'ProductQuestion container-l'}) }} data-testid="product-question-block">
     <header class="ProductQuestion-header">
         <h2 class="h2 text-black">{{ labels.title }}</h2>
@@ -131,6 +137,8 @@
 
             {{ form_end(form) }}
         </div>
+    {% elseif not open %}
+        <p class="ProductQuestion-closed paragraph-3 text-grey" data-testid="product-question-closed">{{ labels.closed }}</p>
     {% else %}
         <p class="ProductQuestion-signIn paragraph-3 text-black" data-testid="product-question-sign-in">
             {{ labels.signIn }}
@@ -138,3 +146,4 @@
         </p>
     {% endif %}
 </section>
+{% endif %}

@@ -13,11 +13,19 @@ declare(strict_types=1);
 
 namespace ProductQuestion\Hook;
 
+use ProductQuestion\ProductQuestion;
+use ProductQuestion\Repository\ClosedProductStorageInterface;
+use ProductQuestion\Service\ProductQuestionSettingsInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Core\Event\Hook\HookRenderEvent;
 use Thelia\Core\Hook\BaseHook;
+use Thelia\Core\Security\AccessManager;
+use Thelia\Core\Security\SecurityContext;
+use Thelia\Core\Template\Parser\ParserResolver;
 
 /**
- * The module's entry in the back-office side navigation.
+ * The module's entry in the back-office side navigation, and its card in the Modules tab of the
+ * product edit page.
  *
  * A top-level entry, not a line inside a section: the default-twig side nav folds every
  * section's sub-entries behind a click, so an entry filed under Customers is invisible
@@ -34,6 +42,16 @@ use Thelia\Core\Hook\BaseHook;
  */
 class BackHook extends BaseHook
 {
+    public function __construct(
+        private readonly ClosedProductStorageInterface $closedProducts,
+        private readonly ProductQuestionSettingsInterface $settings,
+        private readonly SecurityContext $securityContext,
+        ?EventDispatcherInterface $dispatcher = null,
+        ?ParserResolver $parserResolver = null,
+    ) {
+        parent::__construct($dispatcher, $parserResolver);
+    }
+
     /**
      * @return array<string, list<array{type: string, method: string, position?: int}>>
      */
@@ -43,6 +61,11 @@ class BackHook extends BaseHook
             'main.in-top-menu-items' => [
                 ['type' => 'back', 'method' => 'onMainInTopMenuItems', 'position' => 4],
             ],
+            // The Modules tab of the product edit page: the switch that closes this product to new
+            // questions.
+            'product.tab-content' => [
+                ['type' => 'back', 'method' => 'onProductTabContent'],
+            ],
         ];
     }
 
@@ -51,5 +74,27 @@ class BackHook extends BaseHook
         // The theme passes the current route as admin_current_location, which is what lets
         // the entry light up on the module's own screens.
         $event->add($this->render('ProductQuestion/hook/menu-item.html.twig', $event->getTemplateVars()));
+    }
+
+    public function onProductTabContent(HookRenderEvent $event): void
+    {
+        $productId = (int) $event->getArgument('product');
+
+        if ($productId <= 0) {
+            return;
+        }
+
+        // The card is the module's: an administrator who may not moderate does not see it, as they
+        // do not see the moderation screens.
+        if (!$this->securityContext->isGranted(['ADMIN'], [], [ProductQuestion::getModuleCode()], [AccessManager::VIEW])) {
+            return;
+        }
+
+        $event->add($this->render('ProductQuestion/hook/product-closure.html.twig', [
+            'productId' => $productId,
+            'productClosed' => $this->closedProducts->isClosed($productId),
+            'shopClosed' => $this->settings->questionsClosed(),
+            'canUpdate' => $this->securityContext->isGranted(['ADMIN'], [], [ProductQuestion::getModuleCode()], [AccessManager::UPDATE]),
+        ]));
     }
 }

@@ -89,6 +89,20 @@ final class UpgradeFrom120Test extends IntegrationTestCase
             self::assertSame(0, $this->scalar("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_question' AND COLUMN_NAME = '$column'"), $column.' is still there');
         }
         self::assertSame(1, $this->scalar("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_question_answer_vote'"));
+        self::assertSame(1, $this->scalar("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_question_closed_product'"));
+    }
+
+    /**
+     * A product closed to questions goes away with its product.
+     */
+    public function testAClosedProductRowCascadesFromItsProduct(): void
+    {
+        (new ProductQuestionSchemaUpgrader($this->con))->upgrade();
+
+        $this->con->exec('INSERT INTO product_question_closed_product (product_id) VALUES (2)');
+        $this->con->exec('DELETE FROM product WHERE id = 2');
+
+        self::assertSame(0, $this->scalar('SELECT COUNT(*) FROM product_question_closed_product'));
     }
 
     /**

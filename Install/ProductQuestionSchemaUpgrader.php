@@ -22,7 +22,8 @@ use Propel\Runtime\Connection\ConnectionInterface;
  * Up to 1.2.0 a question carried its one answer in three columns of its own (`answer`,
  * `answered_at`, `answered_by`). From 1.3.0 answers live in product_question_answer, several
  * per question, the shop's flagged official, with their helpful votes in
- * product_question_answer_vote. The answer a shop published becomes the official answer of
+ * product_question_answer_vote, and the products closed to new questions in
+ * product_question_closed_product. The answer a shop published becomes the official answer of
  * its question, published, with its date and its author; only then are the old columns
  * dropped.
  *
@@ -95,6 +96,21 @@ final readonly class ProductQuestionSchemaUpgrader
         ) ENGINE=InnoDB
         SQL;
 
+    private const CREATE_CLOSED_PRODUCT_TABLE = <<<'SQL'
+        CREATE TABLE `product_question_closed_product`
+        (
+            `product_id` INTEGER NOT NULL,
+            `created_at` TIMESTAMP NULL,
+            `updated_at` TIMESTAMP NULL,
+            PRIMARY KEY (`product_id`),
+            CONSTRAINT `fk_product_question_closed_product_product_id`
+                FOREIGN KEY (`product_id`)
+                REFERENCES `product` (`id`)
+                ON UPDATE RESTRICT
+                ON DELETE CASCADE
+        ) ENGINE=InnoDB
+        SQL;
+
     /**
      * The answer of each 1.2.0 question that has one, as its official answer. It was published
      * when it was written, and its author was told then: published_at carries that date so that
@@ -138,6 +154,10 @@ final readonly class ProductQuestionSchemaUpgrader
 
         if (!$this->tableExists('product_question_answer_vote')) {
             $this->execute(self::CREATE_VOTE_TABLE);
+        }
+
+        if (!$this->tableExists('product_question_closed_product')) {
+            $this->execute(self::CREATE_CLOSED_PRODUCT_TABLE);
         }
 
         if (!$this->columnExists('product_question', 'helpful_count')) {

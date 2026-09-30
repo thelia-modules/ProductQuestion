@@ -15,11 +15,14 @@ namespace ProductQuestion\Tests\Unit\Service;
 
 use PHPUnit\Framework\TestCase;
 use ProductQuestion\Exception\InvalidProductQuestionException;
+use ProductQuestion\Exception\ProductQuestionsClosedException;
 use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Service\Front\ProductQuestionTextSanitizer;
+use ProductQuestion\Service\ProductQuestionAvailability;
 use ProductQuestion\Service\ProductQuestionCustomerAnswerer;
 use ProductQuestion\Tests\Double\FixedSettings;
+use ProductQuestion\Tests\Double\InMemoryClosedProducts;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionAnswerStorage;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionStorage;
 use ProductQuestion\Tests\Double\InMemoryProductVisibility;
@@ -34,12 +37,15 @@ final class ProductQuestionCustomerAnswererTest extends TestCase
 
     private FixedSettings $settings;
 
+    private InMemoryClosedProducts $closedProducts;
+
     private ProductQuestionCustomerAnswerer $answerer;
 
     protected function setUp(): void
     {
         $this->answers = new InMemoryProductQuestionAnswerStorage();
         $this->settings = new FixedSettings(customerAnswers: true);
+        $this->closedProducts = new InMemoryClosedProducts();
         $this->answerer = new ProductQuestionCustomerAnswerer(
             new InMemoryProductQuestionStorage([
                 $this->question(1, 12, ProductQuestionStatus::Published),
@@ -51,6 +57,7 @@ final class ProductQuestionCustomerAnswererTest extends TestCase
             new ProductQuestionTextSanitizer(),
             new InMemoryProductVisibility([12]),
             $this->settings,
+            new ProductQuestionAvailability($this->settings, $this->closedProducts),
         );
     }
 
@@ -128,5 +135,30 @@ final class ProductQuestionCustomerAnswererTest extends TestCase
         $this->expectException(InvalidProductQuestionException::class);
 
         $this->answerer->answer(1, 0, 'Oui.');
+    }
+
+    /**
+     * A closed product is read-only: its published questions take no new answer.
+     */
+    public function testAnAnswerToAQuestionOfAClosedProductIsRefused(): void
+    {
+        $this->closedProducts->setClosed(12, true);
+
+        $this->expectException(ProductQuestionsClosedException::class);
+
+        try {
+            $this->answerer->answer(1, 55, 'Yes, it folds flat.');
+        } finally {
+            self::assertSame([], $this->answers->saved);
+        }
+    }
+
+    public function testAnAnswerIsRefusedWhileTheWholeShopIsClosed(): void
+    {
+        $this->settings->setQuestionsClosed(true);
+
+        $this->expectException(ProductQuestionsClosedException::class);
+
+        $this->answerer->answer(1, 55, 'Yes, it folds flat.');
     }
 }

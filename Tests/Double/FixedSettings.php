@@ -17,8 +17,10 @@ use ProductQuestion\Service\ProductQuestionSettingsInterface;
 
 final class FixedSettings implements ProductQuestionSettingsInterface
 {
-    public function __construct(public bool $customerAnswers = false)
-    {
+    public function __construct(
+        public bool $customerAnswers = false,
+        public bool $closed = false,
+    ) {
     }
 
     public function allowsCustomerAnswers(): bool
@@ -29,5 +31,15 @@ final class FixedSettings implements ProductQuestionSettingsInterface
     public function setAllowsCustomerAnswers(bool $allowed): void
     {
         $this->customerAnswers = $allowed;
+    }
+
+    public function questionsClosed(): bool
+    {
+        return $this->closed;
+    }
+
+    public function setQuestionsClosed(bool $closed): void
+    {
+        $this->closed = $closed;
     }
 }

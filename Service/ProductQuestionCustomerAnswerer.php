@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace ProductQuestion\Service;
 
 use ProductQuestion\Exception\InvalidProductQuestionException;
+use ProductQuestion\Exception\ProductQuestionsClosedException;
 use ProductQuestion\Model\ProductQuestionAnswer;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Repository\ProductQuestionAnswerStorageInterface;
@@ -38,6 +39,7 @@ final readonly class ProductQuestionCustomerAnswerer
         private ProductQuestionTextSanitizer $sanitizer,
         private ProductVisibilityInterface $products,
         private ProductQuestionSettingsInterface $settings,
+        private ProductQuestionAvailability $availability,
     ) {
     }
 
@@ -73,6 +75,11 @@ final readonly class ProductQuestionCustomerAnswerer
 
         if (null === $question || !$question->isPublished() || !$this->products->isVisible((int) $question->getProductId())) {
             throw InvalidProductQuestionException::unknownQuestion();
+        }
+
+        // A closed product is read-only: its questions stay on the page, nobody adds to them.
+        if (!$this->availability->isOpenFor((int) $question->getProductId())) {
+            throw ProductQuestionsClosedException::forProduct((int) $question->getProductId());
         }
 
         $answer = new ProductQuestionAnswer();
