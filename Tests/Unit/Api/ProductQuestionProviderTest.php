@@ -184,6 +184,18 @@ final class ProductQuestionProviderTest extends TestCase
         self::assertSame([['offset' => 2, 'limit' => 2]], $this->storage->publishedPageCalls);
     }
 
+    /**
+     * The page is typed by anyone: one past what an integer offset can hold was a TypeError in
+     * the storage, a 500. It is an empty page, as any page past the last one.
+     */
+    public function testAnOversizedPageIsAnEmptyPageRatherThanAnError(): void
+    {
+        $items = $this->collection(['productId' => 12, 'locale' => 'fr_FR', 'page' => '99999999999999999999']);
+
+        self::assertSame([], $items);
+        self::assertGreaterThan(0, $this->storage->publishedPageCalls[0]['offset']);
+    }
+
     public function testOnePublishedQuestionIsReadableByItsId(): void
     {
         $item = $this->provider()->provide(new Get(), ['id' => 1]);

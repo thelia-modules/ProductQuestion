@@ -147,7 +147,9 @@ final readonly class ProductQuestionListFilters
 
     public function offset(): int
     {
-        return ($this->page - 1) * $this->limit;
+        // The page comes from the query string: past the last offset an integer can hold, the
+        // product would turn into a float. It is an empty page, as any page past the last one.
+        return min($this->page - 1, intdiv(\PHP_INT_MAX, max(1, $this->limit))) * $this->limit;
     }
 
     /**
