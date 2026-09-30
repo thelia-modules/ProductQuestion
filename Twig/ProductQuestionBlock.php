@@ -234,11 +234,8 @@ class ProductQuestionBlock
     {
         $name = \Locale::getDisplayLanguage($questionLocale, $this->locale);
 
-        if ('' === $name || $name === $questionLocale) {
-            return $questionLocale;
-        }
-
-        return mb_strtoupper(mb_substr($name, 0, 1)).mb_substr($name, 1);
+        // As the language itself writes it in a sentence: "French" in English, "anglais" in French.
+        return '' === $name ? $questionLocale : $name;
     }
 
     /** The lang attribute of a question asked in another language than the page's. */
