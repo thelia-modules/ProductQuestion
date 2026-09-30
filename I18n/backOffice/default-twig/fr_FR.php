@@ -90,4 +90,7 @@ return [
     'Delete the selection' => 'Supprimer la sélection',
     'Delete the selected questions and their answers? This cannot be undone.' => 'Supprimer les questions sélectionnées et leurs réponses ? Cette action est définitive.',
     '%count% question(s) processed.' => '%count% question(s) traitée(s).',
+
+    'Questions per page on the product page' => 'Questions par page sur la fiche produit',
+    '0 shows every question on one page. Above that, a "Show more" link loads the next ones.' => '0 affiche toutes les questions sur une seule page. Au-delà, un lien « Voir plus de questions » charge les suivantes.',
 ];

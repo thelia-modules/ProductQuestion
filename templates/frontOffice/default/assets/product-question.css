@@ -134,6 +134,15 @@
   margin: 2.5rem 0 0;
 }
 
+.ProductQuestion-more {
+  margin: 1.5rem 0 0;
+}
+
+.ProductQuestion-moreLink {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
 .ProductQuestion-closed {
   margin: 2.5rem 0 0;
 }

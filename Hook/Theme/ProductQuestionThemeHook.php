@@ -55,8 +55,10 @@ final readonly class ProductQuestionThemeHook implements ThemeHookInterface
             return '';
         }
 
+        $request = $this->requestStack->getCurrentRequest();
+
         // Lang::getDefaultLanguage() is the shop's language, not the one being browsed.
-        $locale = $this->requestStack->getCurrentRequest()?->getLocale() ?? '';
+        $locale = $request?->getLocale() ?? '';
 
         if ('' === $locale) {
             return '';
@@ -65,7 +67,15 @@ final readonly class ProductQuestionThemeHook implements ThemeHookInterface
         return $this->twig->render('@ProductQuestionModule/theme_hook/product-question.html.twig', [
             'productId' => $productId,
             'locale' => $locale,
+            // The "Show more" link of a visitor without JavaScript. The component bounds it.
+            'page' => max(1, self::positiveInt($request?->query->all()['questions_page'] ?? null)),
         ]);
+    }
+
+    /** A query-string value is a string, an array, or nothing: only digits make a number. */
+    private static function positiveInt(mixed $value): int
+    {
+        return \is_string($value) && ctype_digit($value) ? (int) $value : 0;
     }
 
     /**

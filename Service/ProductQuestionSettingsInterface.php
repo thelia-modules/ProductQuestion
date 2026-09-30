@@ -36,4 +36,12 @@ interface ProductQuestionSettingsInterface
     public function questionsClosed(): bool;
 
     public function setQuestionsClosed(bool $closed): void;
+
+    /**
+     * How many questions the product page shows before offering the next ones. 0 shows them all
+     * on one page, as the module always did.
+     */
+    public function questionsPerPage(): int;
+
+    public function setQuestionsPerPage(int $perPage): void;
 }

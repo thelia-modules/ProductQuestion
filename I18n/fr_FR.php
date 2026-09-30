@@ -48,4 +48,6 @@ return [
     'Back to the shop' => 'Retour à la boutique',
 
     'This product no longer takes questions.' => 'Ce produit ne reçoit plus de nouvelles questions.',
+
+    'Show more questions' => 'Voir plus de questions',
 ];

@@ -53,6 +53,7 @@ final class ProductPageBlockTest extends WebIntegrationTestCase
     {
         $settings = new ModuleConfigProductQuestionSettings();
         $settings->setQuestionsClosed(false);
+        $settings->setQuestionsPerPage(0);
 
         parent::tearDown();
     }
@@ -95,6 +96,45 @@ final class ProductPageBlockTest extends WebIntegrationTestCase
         self::assertCount(0, $page->filter('[data-testid="product-question-block"]'));
         self::assertCount(1, $page->filter('[data-testid="product-question-block-closed"][hidden]'));
         self::assertSame('', trim($page->filter('[data-testid="product-question-block-closed"]')->text()));
+    }
+
+    /**
+     * Out of the box every question is on the page, as in 1.3.0.
+     */
+    public function testEveryQuestionIsShownUntilTheShopSetsAPageSize(): void
+    {
+        for ($i = 1; $i <= 5; ++$i) {
+            $this->publish('Question number '.$i.'?');
+        }
+
+        $block = $this->block();
+
+        self::assertCount(5, $block->filter('[data-testid^="product-question-item-"]'));
+        self::assertCount(0, $block->filter('[data-testid="product-question-more"]'));
+    }
+
+    /**
+     * A page at a time, the next one behind a link that works without JavaScript.
+     */
+    public function testAPageSizeCutsTheListAndTheLinkShowsTheNextPage(): void
+    {
+        (new ModuleConfigProductQuestionSettings())->setQuestionsPerPage(2);
+
+        for ($i = 1; $i <= 5; ++$i) {
+            $this->publish('Question number '.$i.'?');
+        }
+
+        $block = $this->block();
+        self::assertCount(2, $block->filter('[data-testid^="product-question-item-"]'));
+        self::assertSame('?questions_page=2#product-questions', $block->filter('[data-testid="product-question-more"]')->attr('href'));
+
+        $block = $this->block('?questions_page=2');
+        self::assertCount(4, $block->filter('[data-testid^="product-question-item-"]'));
+        self::assertSame('?questions_page=3#product-questions', $block->filter('[data-testid="product-question-more"]')->attr('href'));
+
+        $block = $this->block('?questions_page=3');
+        self::assertCount(5, $block->filter('[data-testid^="product-question-item-"]'));
+        self::assertCount(0, $block->filter('[data-testid="product-question-more"]'), 'Nothing left to show.');
     }
 
     private function publish(string $content, string $locale = 'en_US'): ProductQuestion

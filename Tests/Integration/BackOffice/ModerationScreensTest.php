@@ -261,6 +261,21 @@ final class ModerationScreensTest extends WebIntegrationTestCase
         return 0 === $badge->count() ? 0 : (int) $badge->text();
     }
 
+    public function testThePageSizeOfTheProductPageIsSetFromTheListScreen(): void
+    {
+        $crawler = $this->client->request('GET', self::LIST_URL);
+        $token = (string) $crawler->filter('[data-testid="product-question-settings"] input[name="_token"]')->attr('value');
+        $settings = new ModuleConfigProductQuestionSettings();
+
+        foreach (['7' => 7, '500' => 100, 'abc' => 0, '-3' => 0, '' => 0] as $typed => $stored) {
+            $this->client->request('POST', self::LIST_URL.'/settings', ['_token' => $token, 'questions_per_page' => (string) $typed]);
+            self::assertSame($stored, $settings->questionsPerPage(), 'Typed: "'.$typed.'"');
+        }
+
+        $crawler = $this->client->request('GET', self::LIST_URL);
+        self::assertSame('0', $crawler->filter('[data-testid="product-question-settings"] input[name="questions_per_page"]')->attr('value'));
+    }
+
     private function tokenOfTheEditScreen(): string
     {
         $crawler = $this->client->request('GET', self::LIST_URL.'/'.$this->question->getId());

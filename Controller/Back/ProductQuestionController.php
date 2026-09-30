@@ -82,6 +82,7 @@ class ProductQuestionController extends BaseAdminController
             ...$this->listPresenter->present($filters, $request->getLocale()),
             'allowsCustomerAnswers' => $this->settings->allowsCustomerAnswers(),
             'questionsClosed' => $this->settings->questionsClosed(),
+            'questionsPerPage' => $this->settings->questionsPerPage(),
             // The bulk buttons follow the rights their route checks.
             'canUpdate' => $this->isModuleGranted(AccessManager::UPDATE),
             'canDelete' => $this->isModuleGranted(AccessManager::DELETE),
@@ -275,10 +276,12 @@ class ProductQuestionController extends BaseAdminController
         $closed = '1' === $request->request->get('questions_closed');
         $this->settings->setAllowsCustomerAnswers($allowed);
         $this->settings->setQuestionsClosed($closed);
+        $this->settings->setQuestionsPerPage(self::number($request, 'questions_per_page'));
         $this->log(AccessManager::UPDATE, \sprintf(
-            'Product question settings saved: customer answers %s, questions %s',
+            'Product question settings saved: customer answers %s, questions %s, %d per page',
             $allowed ? 'on' : 'off',
             $closed ? 'closed' : 'open',
+            $this->settings->questionsPerPage(),
         ));
 
         return $this->backToList();
@@ -354,6 +357,14 @@ class ProductQuestionController extends BaseAdminController
     private function checkModuleAccess(string $access): ?Response
     {
         return $this->checkAuth([], [ProductQuestionModule::getModuleCode()], $access);
+    }
+
+    /** A number field of the settings form; anything else is 0, the setting's "off". */
+    private static function number(Request $request, string $field): int
+    {
+        $value = $request->request->get($field);
+
+        return \is_string($value) && ctype_digit(trim($value)) ? (int) trim($value) : 0;
     }
 
     private function isModuleGranted(string $access): bool
