@@ -34,7 +34,7 @@ that kept the data finds the questions where they were.
 
 ## Data
 
-Three tables.
+Four tables.
 
 `product_question`: one question about one product.
 
@@ -42,7 +42,7 @@ Three tables.
 |---|---|
 | `product_id` | The product. Deleting the product deletes its questions, their answers and votes. |
 | `customer_id` | Who asked. Set to null when the account is deleted or anonymized. |
-| `locale` | The language it was asked in. The product page shows the visitor's own. |
+| `locale` | The language it was asked in. The product page shows the visitor's own, or every language when the shop says so. |
 | `content` | The question. |
 | `status` | `0` pending, `1` published, `2` refused. |
 | `helpful_count` | The helpful votes of its published answers, summed: what the page orders questions by. |
@@ -57,6 +57,9 @@ to null when the account goes; the answer stays.
 `product_question_answer_vote`: one row per customer who found an answer helpful, unique on
 (answer, customer), so a vote counts once whatever the number of clicks. Anonymizing a customer
 keeps their votes counting and removes their id.
+
+`product_question_closed_product`: one row per product the shop closed to new questions. Deleting
+the product deletes its row.
 
 The three statuses are a PHP enum, `ProductQuestion\Model\ProductQuestionStatus`, shared by
 questions and answers. `Published` was called `Answered` up to 1.2.0; the old name is kept as a
@@ -87,6 +90,26 @@ votes. It carries the form to ask a question, and, when the shop lets customers 
 each answer. Nothing in the block depends on who is looking beyond the forms, so the page can
 still come from a shared cache: a vote is confirmed in a message, not by changing the button.
 
+Settings of the moderation screen change the block; each is off by default, which is the block
+described above:
+
+- **Questions per page**: past this number, a "Show more questions" link adds the next page. It is
+  a plain link (`?questions_page=2`) the live component intercepts, so it works without
+  JavaScript and never loads a page of questions by a script alone.
+- **Offer a search above this number of published questions**: the field searches the questions
+  and their published answers. A GET form (`?questions_search=`), filtered in place when
+  JavaScript runs; "Show more" keeps the term.
+- **Show the questions of every language**: each question asked in another language than the
+  page's says which ("Asked in French", "Posée en anglais") and carries a `lang` attribute.
+- **Close the whole shop to new questions**, and the same switch per product in the **Modules**
+  tab of the product edit page: the form and the answer buttons leave the block, a line says the
+  product takes no more questions, and the published questions stay. A product with nothing
+  published shows nothing at all.
+
+The block costs the product page the same number of queries whatever the number of questions: the
+page of questions, their answers, the closed-product lookup, and a count once "Show more" or the
+search is on.
+
 The block carries its own stylesheet, `templates/frontOffice/default/assets/product-question.css`,
 linked by the hook through `module_asset()`. Type scale and colours are the theme's classes.
 
@@ -101,11 +124,11 @@ For a front office that talks to the API rather than to Twig:
 
 | Operation | Who | What |
 |---|---|---|
-| `GET /api/front/product_questions?productId=&locale=` | anyone | The published questions of one product, in one language (the request's when `locale` is absent), with their published answers in `answers`. `answer` and `answeredAt` still carry the shop's answer, as in 1.2.0. Paginated (`page`, `itemsPerPage`, at most 100). A parameter given as an array is a 400. |
+| `GET /api/front/product_questions?productId=&locale=&search=` | anyone | The published questions of one product, in one language (the request's when `locale` is absent, every language when the shop shows them all), with their published answers in `answers`. `search` is applied above the shop's search threshold and ignored below it, as on the product page. `answer` and `answeredAt` still carry the shop's answer, as in 1.2.0. Paginated (`page`, `itemsPerPage`, at most 100). A parameter given as an array is a 400. |
 | `GET /api/front/product_questions/{id}` | anyone | One published question. A pending or refused one is a 404. |
-| `POST /api/front/account/product_questions` | a signed-in customer (JWT) | `{"productId": 12, "content": "…", "locale": "fr_FR"}`. Answers 201 with `published: false`, 422 on an invalid text or on a product that does not exist or is offline, 429 past the budgets. |
+| `POST /api/front/account/product_questions` | a signed-in customer (JWT) | `{"productId": 12, "content": "…", "locale": "fr_FR"}`. Answers 201 with `published: false`, 422 on an invalid text or on a product that does not exist or is offline, 403 on a closed product or shop, 429 past the budgets. |
 | `GET /api/front/product_question_answers/{id}` | anyone | One published answer of a published question. |
-| `POST /api/front/account/product_question_answers` | a signed-in customer (JWT) | `{"questionId": 5, "content": "…"}`. 201 with `published: false`; 422 when the shop takes no customer answers or the question is not on the page; 429 past the budgets. |
+| `POST /api/front/account/product_question_answers` | a signed-in customer (JWT) | `{"questionId": 5, "content": "…"}`. 201 with `published: false`; 422 when the shop takes no customer answers or the question is not on the page; 403 when its product or the shop is closed; 429 past the budgets. |
 | `POST /api/front/account/product_question_answers/{id}/helpful` | a signed-in customer (JWT) | No body. 200 with the answer and its count, counted once per customer; 404 for an answer off the page or one's own. |
 
 Neither the customers who asked or answered nor the administrator who answered is in any payload.
@@ -137,13 +160,17 @@ The module adds a **Customer questions** entry at the first level of the side na
 after the entries of the Page, TheliaBlocks and Option modules. It is contributed through the
 `main.in-top-menu-items` hook at position 4, whose `module_hook` row is created when the
 container is compiled, so the entry appears once the cache has been rebuilt with the module
-active.
+active. A badge on it counts the questions and customer answers waiting for a moderator: two
+indexed counts, run only when the menu is drawn.
 
 The entry opens the moderation list, at `/admin/module/ProductQuestion`, which is also where the
 **Configure** button of the module list leads. It has one tab per status with a count, an
 **Answers waiting** tab for the questions with a customer answer to moderate, filters on
-language, product, customer and sort order, and pagination. The settings sit above the list:
-**Let customers answer the published questions**, off by default.
+language, product, customer and sort order, and pagination. Ticking questions, or the box of the
+header for the whole page, and choosing **Publish**, **Refuse** or **Delete the selection**
+applies the decision to each, with one line per question in the administration log; deleting
+asks for a confirmation. The settings sit above the list, all off by default: customer answers,
+the shop-wide closing, the questions of every language, the page size and the search threshold.
 
 Opening a question shows it in full, links to the customer record and to the product, and
 carries the textarea the shop answers with. Publishing the shop's answer puts the question on the
