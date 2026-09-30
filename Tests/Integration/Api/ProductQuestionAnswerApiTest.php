@@ -34,6 +34,10 @@ final class ProductQuestionAnswerApiTest extends ApiTestCase
     {
         parent::setUp();
 
+        // The budget per address lives in the cache pool and outlives a run: every run of this
+        // file comes from the same address, and would otherwise run out of it.
+        static::getContainer()->get('limiter.product_question_answer_per_ip')->create('127.0.0.1')->reset();
+
         $factory = $this->createFixtureFactory();
         $this->product = $factory->product($factory->category(), $factory->taxRule(), $factory->currency(), ['visible' => 1]);
         $this->question = (new ProductQuestion())

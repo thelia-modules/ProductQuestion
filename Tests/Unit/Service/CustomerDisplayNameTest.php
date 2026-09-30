@@ -16,6 +16,7 @@ namespace ProductQuestion\Tests\Unit\Service;
 use PHPUnit\Framework\TestCase;
 use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Service\CustomerDisplayName;
+use ProductQuestion\Tests\Double\CustomerStandIn;
 
 final class CustomerDisplayNameTest extends TestCase
 {
@@ -26,26 +27,7 @@ final class CustomerDisplayNameTest extends TestCase
 
     private function customer(?string $first, ?string $last, string $email = 'ada@example.com'): object
     {
-        return new class($first, $last, $email) {
-            public function __construct(private ?string $first, private ?string $last, private string $email)
-            {
-            }
-
-            public function getFirstname(): ?string
-            {
-                return $this->first;
-            }
-
-            public function getLastname(): ?string
-            {
-                return $this->last;
-            }
-
-            public function getEmail(): string
-            {
-                return $this->email;
-            }
-        };
+        return CustomerStandIn::make($first, $last, $email);
     }
 
     public function testACustomerIsNamedByTheirFullName(): void
