@@ -120,6 +120,50 @@ final class ProductQuestionAnswererTest extends TestCase
     }
 
     /**
+     * A refusal keeps the answer. A question published, refused, then published again has
+     * already been announced to its customer: the second publication is an edit, not a first
+     * answer, whatever the status said in between.
+     */
+    public function testAnAnswerRepublishedAfterARefusalIsNotAFirstAnswer(): void
+    {
+        $flags = [];
+        $this->dispatcher->addListener(
+            ProductQuestionAnsweredEvent::class,
+            static function (ProductQuestionAnsweredEvent $event) use (&$flags): void {
+                $flags[] = $event->isFirstAnswer();
+            }
+        );
+
+        $question = $this->pendingQuestion();
+        $this->answerer->answer($question, 'Oui, compatible.', 7);
+        $question->setStatusEnum(ProductQuestionStatus::Refused);
+        $this->answerer->answer($question, 'Oui, compatible.', 7);
+
+        self::assertSame([true, false], $flags);
+    }
+
+    /**
+     * A question refused before anyone wrote an answer is still unanswered: publishing it
+     * afterwards is the first answer, and the customer hears about it.
+     */
+    public function testAnsweringAQuestionRefusedWithoutAnAnswerIsAFirstAnswer(): void
+    {
+        $flags = [];
+        $this->dispatcher->addListener(
+            ProductQuestionAnsweredEvent::class,
+            static function (ProductQuestionAnsweredEvent $event) use (&$flags): void {
+                $flags[] = $event->isFirstAnswer();
+            }
+        );
+
+        $question = $this->pendingQuestion();
+        $question->setStatusEnum(ProductQuestionStatus::Refused);
+        $this->answerer->answer($question, 'Oui, compatible.', 7);
+
+        self::assertSame([true], $flags);
+    }
+
+    /**
      * A moderator who saves an empty textarea has not answered. Publishing that would put a
      * heading with nothing under it on the product page.
      */
