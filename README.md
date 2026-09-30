@@ -1,11 +1,17 @@
 # ProductQuestion
 
-Lets a signed-in customer ask a question about a product, and an administrator answer it from
-the back office. A question appears on the product page once it has been answered, and never
-before.
+Lets a signed-in customer ask a question about a product. The shop publishes it, answers it
+from the back office, and can let other customers answer too. Customers say which answers
+helped them, and the most helpful come first. Nothing a customer writes reaches the product
+page before a moderator has accepted it.
 
 Thelia 3 only: the front office is Twig, the back office runs on the `default-twig` theme, and
 the module carries no Smarty template and no loop.
+
+**Signed-in customers only in this version.** A visitor without an account cannot ask, answer
+or vote; the form invites them to sign in. There is no guest question (name and address) and no
+anti-robot challenge: the account is what stands in for one. Guest questions behind the
+ReCaptcha module are a possible later version.
 
 ## Requirements
 
@@ -28,36 +34,66 @@ that kept the data finds the questions where they were.
 
 ## Data
 
-One table, `product_question`. A question belongs to one product and, while the account
-exists, to one customer.
+Three tables.
+
+`product_question`: one question about one product.
 
 | Column | Meaning |
 |---|---|
-| `product_id` | The product the question is about. Deleting the product deletes its questions. |
-| `customer_id` | Who asked. Set to null when the account is deleted, so the answer stays on the page. |
-| `locale` | The language the question was asked in. The product page shows the visitor's own. |
+| `product_id` | The product. Deleting the product deletes its questions, their answers and votes. |
+| `customer_id` | Who asked. Set to null when the account is deleted or anonymized. |
+| `locale` | The language it was asked in. The product page shows the visitor's own. |
 | `content` | The question. |
-| `status` | `0` pending, `1` answered, `2` refused. |
-| `answer` | What the shop replied. |
-| `answered_at`, `answered_by` | When, and by which administrator. Null when the account is deleted. |
+| `status` | `0` pending, `1` published, `2` refused. |
+| `helpful_count` | The helpful votes of its published answers, summed: what the page orders questions by. |
+| `notify_author` | Whether the author still gets a mail for each new answer. Turned off by the link in those mails. |
 
-The three statuses are a PHP enum, `ProductQuestion\Model\ProductQuestionStatus`, not a table:
-they are a workflow the module implements, not a list a shop administrator can add to.
+`product_question_answer`: the answers of a question. The shop's answer is flagged
+`is_official`, one per question, published as it is written. A customer's answer starts pending.
+`published_at` is the date of the first publication: it is what tells a first publication, which
+the author of the question is told about, from a later one. `customer_id` and `admin_id` are set
+to null when the account goes; the answer stays.
+
+`product_question_answer_vote`: one row per customer who found an answer helpful, unique on
+(answer, customer), so a vote counts once whatever the number of clicks. Anonymizing a customer
+keeps their votes counting and removes their id.
+
+The three statuses are a PHP enum, `ProductQuestion\Model\ProductQuestionStatus`, shared by
+questions and answers. `Published` was called `Answered` up to 1.2.0; the old name is kept as a
+constant.
+
+## Upgrading from 1.2.0
+
+Run `php Thelia module:refresh` after updating the package. `update()` moves each answer the shop
+had published into `product_question_answer` as the official answer of its question, with its
+author and date, then drops the three old columns (`answer`, `answered_at`, `answered_by`). A
+question refused after it was answered keeps its answer, off the page as before. Nobody is mailed
+again: a moved answer counts as already announced. Every step checks the database first, so a
+refresh interrupted half way finishes on the next one without copying anything twice. The same
+upgrade runs on `postActivation()` when the table is found from an earlier install.
+
+The module's stylesheet is copied under `public/assets/` the first time the page needs it and not
+refreshed afterwards: delete `public/assets/frontOffice/<theme>/ProductQuestion/` once after the
+upgrade so the new styles are published.
 
 ## Front office
 
 The module answers the `product.bottom` theme hook, so a theme calling that hook shows the
-block with no further work: a Symfony UX live component with the answered questions of the
-product in the language being browsed, and the form to ask one. The form is drawn for a
-signed-in customer only; a visitor is invited to sign in. A question starts pending and
-appears once the shop has answered it.
+block with no further work: a Symfony UX live component rendered in the page, not loaded by a
+script. It lists the published questions of the product in the language being browsed, the most
+helpful first, each with its published answers: the shop's first, then the customers' by helpful
+votes. It carries the form to ask a question, and, when the shop lets customers answer, an
+"Answer this question" button under each question. A "This answer helped me" button sits under
+each answer. Nothing in the block depends on who is looking beyond the forms, so the page can
+still come from a shared cache: a vote is confirmed in a message, not by changing the button.
 
 The block carries its own stylesheet, `templates/frontOffice/default/assets/product-question.css`,
 linked by the hook through `module_asset()`. Type scale and colours are the theme's classes.
 
-Three budgets guard the ask, declared by the module itself: twenty questions per address per
-hour, ten per customer, three per customer and product. A question that fails validation spends
-none of them.
+Budgets guard the writes, declared by the module itself: for questions, twenty per address per
+hour, ten per customer, three per customer and product; for answers, twenty per address and ten
+per customer per hour. A text that fails validation spends none of them. A vote counts once per
+customer and answer, and nobody votes for their own answer.
 
 ## Front API
 
@@ -65,11 +101,14 @@ For a front office that talks to the API rather than to Twig:
 
 | Operation | Who | What |
 |---|---|---|
-| `GET /api/front/product_questions?productId=&locale=` | anyone | The answered questions of one product, in one language (the request's when `locale` is absent). Paginated (`page`, `itemsPerPage`, at most 100). A parameter given as an array is a 400. |
-| `GET /api/front/product_questions/{id}` | anyone | One answered question. A pending or refused one is a 404. |
+| `GET /api/front/product_questions?productId=&locale=` | anyone | The published questions of one product, in one language (the request's when `locale` is absent), with their published answers in `answers`. `answer` and `answeredAt` still carry the shop's answer, as in 1.2.0. Paginated (`page`, `itemsPerPage`, at most 100). A parameter given as an array is a 400. |
+| `GET /api/front/product_questions/{id}` | anyone | One published question. A pending or refused one is a 404. |
 | `POST /api/front/account/product_questions` | a signed-in customer (JWT) | `{"productId": 12, "content": "…", "locale": "fr_FR"}`. Answers 201 with `published: false`, 422 on an invalid text or on a product that does not exist or is offline, 429 past the budgets. |
+| `GET /api/front/product_question_answers/{id}` | anyone | One published answer of a published question. |
+| `POST /api/front/account/product_question_answers` | a signed-in customer (JWT) | `{"questionId": 5, "content": "…"}`. 201 with `published: false`; 422 when the shop takes no customer answers or the question is not on the page; 429 past the budgets. |
+| `POST /api/front/account/product_question_answers/{id}/helpful` | a signed-in customer (JWT) | No body. 200 with the answer and its count, counted once per customer; 404 for an answer off the page or one's own. |
 
-Neither the customer who asked nor the administrator who answered is in any payload.
+Neither the customers who asked or answered nor the administrator who answered is in any payload.
 
 ## Notification
 
@@ -80,9 +119,15 @@ other in Configuration > Mailing templates; its templates live in `templates/ema
 A shop with no notification address gets no mail and one line in the Thelia log; the question
 is stored either way.
 
-The customer is told once, when the shop first publishes its answer: their question, the
-answer and a link to the product page, in the language they asked in. Rewriting the answer
-later sends nothing. The message is `product_question_answered_customer`.
+The author of a question is told once per answer, when it is first published, in the language
+they asked in: `product_question_answered_customer` for the shop's answer,
+`product_question_answered_by_customer` for another customer's. Rewriting an answer, or
+publishing it again after a refusal, sends nothing, nor does an author's own answer.
+
+Each of these mails carries a link to stop them for that question: signed with the application
+secret and valid for 90 days, with nothing stored. Opening it shows a page with one button, so a
+mail scanner following every link does not unsubscribe anyone; the button sets `notify_author`
+off. An altered or expired link is refused and changes nothing.
 
 A shop that activated an earlier version gets the messages it lacks on `php Thelia module:refresh`.
 
@@ -95,22 +140,45 @@ container is compiled, so the entry appears once the cache has been rebuilt with
 active.
 
 The entry opens the moderation list, at `/admin/module/ProductQuestion`, which is also where the
-**Configure** button of the module list leads. It has one tab per
-status with a count, filters on language, product, customer and sort order, and pagination.
-Opening a question shows it in full, links to the customer record and to the product, and
-carries the textarea the shop answers with. Publishing an answer puts the question on the
-product page. Refusing takes it off without erasing what was drafted.
+**Configure** button of the module list leads. It has one tab per status with a count, an
+**Answers waiting** tab for the questions with a customer answer to moderate, filters on
+language, product, customer and sort order, and pagination. The settings sit above the list:
+**Let customers answer the published questions**, off by default.
 
-Access is granted on the module itself, so a profile can be given these screens and nothing
-else of the back office.
+Opening a question shows it in full, links to the customer record and to the product, and
+carries the textarea the shop answers with. Publishing the shop's answer puts the question on the
+product page; **Publish without answering** puts it there with no answer, for customers to
+answer. Refusing takes it off without erasing what was written. Customer answers are listed under
+it with their status and votes, each with Publish, Refuse and Delete.
+
+Every change takes the session token and leaves a line in the administration log, under the
+module and the question. Access is granted on the module itself, so a profile can be given these
+screens and nothing else of the back office.
+
+## Personal data
+
+The core's export of a customer's personal data carries their questions, the answers they wrote
+and the answers they voted for, under `product_question`. Anonymizing the customer cuts the link
+from all three; the texts stay on the product page and the votes keep counting.
 
 ## Tests
 
-The module's own suite needs neither a database nor a booted kernel:
+Unit tests need neither a database nor a booted kernel:
 
 ```
 vendor/bin/phpunit -c local/modules/ProductQuestion/phpunit.xml.dist
 ```
+
+Integration tests (repository, upgrade from 1.2.0, front API, unsubscribe link, moderation
+screens, personal data) run on the install's test database, through its root configuration:
+
+```
+php bin/test-prepare
+vendor/bin/phpunit local/modules/ProductQuestion/Tests
+```
+
+The upgrade test creates and drops a scratch database, `test_product_question_upgrade`, next to
+the test one: the database user needs the right to create it.
 
 Style and static analysis, from the Thelia root:
 
