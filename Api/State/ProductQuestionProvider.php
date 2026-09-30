@@ -20,6 +20,7 @@ use ApiPlatform\State\ProviderInterface;
 use ProductQuestion\Api\Resource\ProductQuestion as ProductQuestionResource;
 use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
+use ProductQuestion\Repository\ProductVisibilityInterface;
 use ProductQuestion\Service\Api\ProductQuestionPayloadMapper;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
@@ -32,6 +33,9 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
  * for the product — the list is the questions of one product, and a request that names none
  * is refused rather than answered with the whole table.
  *
+ * The questions follow their product: a product the shop has taken offline is a 404 on its
+ * page, so its questions are not readable here either, neither as a list nor one by one.
+ *
  * @implements ProviderInterface<ProductQuestionResource>
  */
 final readonly class ProductQuestionProvider implements ProviderInterface
@@ -43,6 +47,7 @@ final readonly class ProductQuestionProvider implements ProviderInterface
         private ProductQuestionStorageInterface $storage,
         private ProductQuestionPayloadMapper $mapper,
         private RequestStack $requestStack,
+        private ProductVisibilityInterface $products,
     ) {
     }
 
@@ -55,8 +60,8 @@ final readonly class ProductQuestionProvider implements ProviderInterface
         $question = $this->storage->findById((int) ($uriVariables['id'] ?? 0));
 
         // Null is a 404: a question waiting for the shop, or one it refused, is not readable
-        // by the visitor who happens to know its id.
-        if (null === $question || !$question->isAnswered()) {
+        // by the visitor who happens to know its id. Nor is one about a product taken offline.
+        if (null === $question || !$question->isAnswered() || !$this->products->isVisible((int) $question->getProductId())) {
             return null;
         }
 
@@ -88,7 +93,11 @@ final readonly class ProductQuestionProvider implements ProviderInterface
         $itemsPerPage = (int) (self::scalar($filters, 'itemsPerPage') ?? self::DEFAULT_ITEMS_PER_PAGE);
         $itemsPerPage = min(self::MAX_ITEMS_PER_PAGE, max(1, $itemsPerPage));
 
-        $slice = $this->storage->findAnsweredForProductPage($productId, $locale, ($page - 1) * $itemsPerPage, $itemsPerPage);
+        // An offline product has no questions to show: the same empty page a product nobody
+        // asked about gets, rather than an error that tells the product exists.
+        $slice = $this->products->isVisible($productId)
+            ? $this->storage->findAnsweredForProductPage($productId, $locale, ($page - 1) * $itemsPerPage, $itemsPerPage)
+            : ['items' => [], 'total' => 0];
 
         $questions = array_map(
             fn (ProductQuestion $question): ProductQuestionResource => $this->mapper->toResource($question),

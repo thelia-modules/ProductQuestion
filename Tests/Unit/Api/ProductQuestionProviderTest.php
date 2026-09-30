@@ -24,6 +24,7 @@ use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Service\Api\ProductQuestionPayloadMapper;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionStorage;
+use ProductQuestion\Tests\Double\InMemoryProductVisibility;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
@@ -62,14 +63,22 @@ final class ProductQuestionProviderTest extends TestCase
         return $question;
     }
 
-    private function provider(string $requestLocale = 'fr_FR'): ProductQuestionProvider
+    /**
+     * @param list<int> $visibleProductIds
+     */
+    private function provider(string $requestLocale = 'fr_FR', array $visibleProductIds = [12, 99]): ProductQuestionProvider
     {
         $requestStack = new RequestStack();
         $request = Request::create('/api/front/product_questions');
         $request->setLocale($requestLocale);
         $requestStack->push($request);
 
-        return new ProductQuestionProvider($this->storage, new ProductQuestionPayloadMapper(), $requestStack);
+        return new ProductQuestionProvider(
+            $this->storage,
+            new ProductQuestionPayloadMapper(),
+            $requestStack,
+            new InMemoryProductVisibility($visibleProductIds),
+        );
     }
 
     /**
@@ -170,5 +179,25 @@ final class ProductQuestionProviderTest extends TestCase
         self::assertNull($this->provider()->provide(new Get(), ['id' => 2]));
         self::assertNull($this->provider()->provide(new Get(), ['id' => 3]));
         self::assertNull($this->provider()->provide(new Get(), ['id' => 404]));
+    }
+
+    /**
+     * The questions follow their product. A product taken offline is a 404 on its page: its
+     * answered questions are not listed to a visitor, and the list is the same empty page a
+     * product nobody asked about gets, not an error that says the product exists.
+     */
+    public function testTheQuestionsOfAnOfflineProductAreNotListed(): void
+    {
+        $result = $this->provider('fr_FR', [99])->provide(new GetCollection(), [], ['filters' => ['productId' => 12, 'locale' => 'fr_FR']]);
+
+        self::assertInstanceOf(TraversablePaginator::class, $result);
+        self::assertSame([], iterator_to_array($result));
+        self::assertSame(0.0, $result->getTotalItems());
+        self::assertSame([], $this->storage->answeredPageCalls);
+    }
+
+    public function testAQuestionOfAnOfflineProductIsNotReadableByItsId(): void
+    {
+        self::assertNull($this->provider('fr_FR', [99])->provide(new Get(), ['id' => 1]));
     }
 }
