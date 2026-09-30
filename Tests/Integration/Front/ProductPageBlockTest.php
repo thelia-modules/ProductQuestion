@@ -218,6 +218,22 @@ final class ProductPageBlockTest extends WebIntegrationTestCase
         self::assertCount(0, $own->filter('.ProductQuestion-language'));
     }
 
+    /**
+     * The language is named as the page's own language writes it inside a sentence.
+     */
+    public function testTheFrenchPageNamesTheLanguageInFrench(): void
+    {
+        (new ModuleConfigProductQuestionSettings())->setShowsAllLanguages(true);
+        $this->product->setLocale('fr_FR')->setTitle('Produit sous questions')->save($this->getPropelConnection());
+        $this->product->setRewrittenUrl('fr_FR', 'produit-question-bloc-test.html');
+        $english = $this->publish('Does it fold?');
+
+        $this->assertPageRenders('/produit-question-bloc-test.html');
+        $page = new Crawler((string) $this->client->getResponse()->getContent());
+
+        self::assertSame('Posée en anglais', trim($page->filter('[data-testid="product-question-language-'.$english->getId().'"]')->text()));
+    }
+
     private function publish(string $content, string $locale = 'en_US'): ProductQuestion
     {
         $question = (new ProductQuestion())
