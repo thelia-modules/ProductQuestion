@@ -24,6 +24,32 @@
         <h2 class="h2 text-black">{{ labels.title }}</h2>
     </header>
 
+    {# A GET form: without JavaScript it reloads the page with the term, read back by the theme
+       hook. With it, the live action filters in place. #}
+    {% if this.searchOffered %}
+        {% set appliedSearch = this.appliedSearch %}
+        <form class="ProductQuestion-search" method="get" action="#product-questions" role="search"
+              data-action="live#action:prevent" data-live-action-param="applySearch" data-testid="product-question-search">
+            <twig:Fields:Input:Base
+                label="{{ labels.searchLabel }}"
+                type="search"
+                name="questions_search"
+                id="product-question-search-{{ this.productId }}"
+                value="{{ this.search }}"
+                class="ProductQuestion-searchField"
+                input:data-model="norender|search"
+                input:maxlength="100"
+            />
+            <twig:Molecules:Button:Base text="{{ labels.searchButton }}" type="submit" color="secondary" class="ProductQuestion-searchSubmit" data-testid="product-question-search-submit" />
+        </form>
+        {% if appliedSearch %}
+            <p class="ProductQuestion-searchResult paragraph-4 text-grey" role="status" data-testid="product-question-search-result">
+                {{ (this.searchTotal > 0 ? labels.searchFound : labels.searchNone)|replace({'%count%': this.searchTotal, '%term%': appliedSearch}) }}
+                <a class="ProductQuestion-searchClear" href="?#product-questions" data-action="live#action:prevent" data-live-action-param="clearSearch" data-testid="product-question-search-clear">{{ labels.searchClear }}</a>
+            </p>
+        {% endif %}
+    {% endif %}
+
     {% if questions is not empty %}
         <ul class="ProductQuestion-list" data-testid="product-question-list">
             {% for question in questions %}
@@ -106,7 +132,7 @@
         {% if this.hasMore %}
             <p class="ProductQuestion-more">
                 <a class="ProductQuestion-moreLink paragraph-3 text-black"
-                   href="?questions_page={{ this.nextPage }}#product-questions"
+                   href="{{ this.moreHref }}"
                    rel="nofollow"
                    data-action="live#action:prevent"
                    data-live-action-param="more"

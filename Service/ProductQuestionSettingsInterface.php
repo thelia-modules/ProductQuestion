@@ -44,4 +44,12 @@ interface ProductQuestionSettingsInterface
     public function questionsPerPage(): int;
 
     public function setQuestionsPerPage(int $perPage): void;
+
+    /**
+     * Above how many published questions a product offers a search in them. 0 never offers one,
+     * as the module always did.
+     */
+    public function searchThreshold(): int;
+
+    public function setSearchThreshold(int $threshold): void;
 }

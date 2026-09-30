@@ -23,6 +23,8 @@ use ProductQuestion\Repository\ProductQuestionAnswerStorageInterface;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
 use ProductQuestion\Repository\ProductVisibilityInterface;
 use ProductQuestion\Service\Api\ProductQuestionPayloadMapper;
+use ProductQuestion\Service\Front\ProductQuestionSearchOffer;
+use ProductQuestion\Service\Front\QuestionSearchTerm;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
@@ -51,6 +53,7 @@ final readonly class ProductQuestionProvider implements ProviderInterface
         private RequestStack $requestStack,
         private ProductVisibilityInterface $products,
         private ProductQuestionAnswerStorageInterface $answers,
+        private ProductQuestionSearchOffer $searchOffer,
     ) {
     }
 
@@ -98,10 +101,12 @@ final readonly class ProductQuestionProvider implements ProviderInterface
         $itemsPerPage = (int) (self::scalar($filters, 'itemsPerPage') ?? self::DEFAULT_ITEMS_PER_PAGE);
         $itemsPerPage = min(self::MAX_ITEMS_PER_PAGE, max(1, $itemsPerPage));
 
+        $search = $this->search($filters, $productId, $locale);
+
         // An offline product has no questions to show: the same empty page a product nobody
         // asked about gets, rather than an error that tells the product exists.
         $slice = $this->products->isVisible($productId)
-            ? $this->storage->findPublishedForProductPage($productId, $locale, ($page - 1) * $itemsPerPage, $itemsPerPage)
+            ? $this->storage->findPublishedForProductPage($productId, $locale, ($page - 1) * $itemsPerPage, $itemsPerPage, $search)
             : ['items' => [], 'total' => 0];
 
         $answers = $this->answers->findPublishedForQuestions(array_map(
@@ -120,6 +125,28 @@ final readonly class ProductQuestionProvider implements ProviderInterface
             $itemsPerPage,
             $slice['total'],
         );
+    }
+
+    /**
+     * The `search` parameter, applied as the block applies its field: only above the threshold
+     * the shop set. Below it the parameter is ignored, and the list is the one the product page
+     * shows. The count it takes is only run when a search is asked for.
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function search(array $filters, int $productId, string $locale): ?string
+    {
+        if (!$this->searchOffer->isEnabled()) {
+            return null;
+        }
+
+        $search = QuestionSearchTerm::normalize(self::scalar($filters, 'search'));
+
+        if (null === $search || !$this->searchOffer->isOfferedFor($this->storage->countPublishedForProduct($productId, $locale))) {
+            return null;
+        }
+
+        return $search;
     }
 
     /**

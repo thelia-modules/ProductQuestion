@@ -93,4 +93,7 @@ return [
 
     'Questions per page on the product page' => 'Questions per page on the product page',
     '0 shows every question on one page. Above that, a "Show more" link loads the next ones.' => '0 shows every question on one page. Above that, a "Show more" link loads the next ones.',
+
+    'Offer a search above this number of published questions' => 'Offer a search above this number of published questions',
+    '0 never offers a search. The search looks into the questions and their published answers.' => '0 never offers a search. The search looks into the questions and their published answers.',
 ];

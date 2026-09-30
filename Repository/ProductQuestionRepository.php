@@ -17,6 +17,7 @@ use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Model\ProductQuestionQuery;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Service\BackOffice\ProductQuestionListFilters;
+use ProductQuestion\Service\Front\QuestionSearchTerm;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Thelia\Model\CustomerQuery;
 
@@ -36,9 +37,9 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
     /**
      * @return list<ProductQuestion>
      */
-    public function findPublishedForProduct(int $productId, string $locale): array
+    public function findPublishedForProduct(int $productId, string $locale, ?string $search = null): array
     {
-        return $this->publishedForProduct($productId, $locale)
+        return $this->publishedForProduct($productId, $locale, $search)
             ->find()
             ->getData();
     }
@@ -46,9 +47,9 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
     /**
      * @return array{items: list<ProductQuestion>, total: int}
      */
-    public function findPublishedForProductPage(int $productId, string $locale, int $offset, int $limit): array
+    public function findPublishedForProductPage(int $productId, string $locale, int $offset, int $limit, ?string $search = null): array
     {
-        $query = $this->publishedForProduct($productId, $locale);
+        $query = $this->publishedForProduct($productId, $locale, $search);
 
         // Counted on a copy, as in searchForModeration().
         $total = (clone $query)->count();
@@ -60,6 +61,11 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
             ->getData();
 
         return ['items' => $items, 'total' => $total];
+    }
+
+    public function countPublishedForProduct(int $productId, string $locale): int
+    {
+        return $this->publishedForProduct($productId, $locale)->count();
     }
 
     /**
@@ -218,12 +224,27 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
         }
     }
 
-    private function publishedForProduct(int $productId, string $locale): ProductQuestionQuery
+    private function publishedForProduct(int $productId, string $locale, ?string $search = null): ProductQuestionQuery
     {
-        return ProductQuestionQuery::create()
+        $query = ProductQuestionQuery::create()
             ->filterByProductId($productId)
             ->filterByStatus(ProductQuestionStatus::Published->value)
-            ->filterByLocale($locale)
+            ->filterByLocale($locale);
+
+        if (null !== $search) {
+            // The question, or one of its published answers: a visitor looking for "waterproof"
+            // wants the question the shop answered with the word as well as the one asking it.
+            $pattern = QuestionSearchTerm::likePattern($search);
+            $query
+                ->condition('pq_search_question', 'product_question.content LIKE ?', $pattern, \PDO::PARAM_STR)
+                ->condition('pq_search_answer', \sprintf(
+                    'EXISTS (SELECT 1 FROM product_question_answer pqa_search WHERE pqa_search.question_id = product_question.id AND pqa_search.status = %d AND pqa_search.content LIKE ?)',
+                    ProductQuestionStatus::Published->value,
+                ), $pattern, \PDO::PARAM_STR)
+                ->where(['pq_search_question', 'pq_search_answer'], Criteria::LOGICAL_OR);
+        }
+
+        return $query
             // The most useful first: the helpful votes of the question's published answers,
             // summed onto the row. Among equals, the most recent question.
             ->orderByHelpfulCount(Criteria::DESC)

@@ -276,6 +276,19 @@ final class ModerationScreensTest extends WebIntegrationTestCase
         self::assertSame('0', $crawler->filter('[data-testid="product-question-settings"] input[name="questions_per_page"]')->attr('value'));
     }
 
+    public function testTheSearchThresholdIsSetFromTheListScreen(): void
+    {
+        $crawler = $this->client->request('GET', self::LIST_URL);
+        $token = (string) $crawler->filter('[data-testid="product-question-settings"] input[name="_token"]')->attr('value');
+        $settings = new ModuleConfigProductQuestionSettings();
+
+        $this->client->request('POST', self::LIST_URL.'/settings', ['_token' => $token, 'search_threshold' => '12']);
+        self::assertSame(12, $settings->searchThreshold());
+
+        $this->client->request('POST', self::LIST_URL.'/settings', ['_token' => $token]);
+        self::assertSame(0, $settings->searchThreshold(), 'Left empty: no search.');
+    }
+
     private function tokenOfTheEditScreen(): string
     {
         $crawler = $this->client->request('GET', self::LIST_URL.'/'.$this->question->getId());

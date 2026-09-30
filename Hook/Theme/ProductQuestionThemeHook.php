@@ -69,6 +69,9 @@ final readonly class ProductQuestionThemeHook implements ThemeHookInterface
             'locale' => $locale,
             // The "Show more" link of a visitor without JavaScript. The component bounds it.
             'page' => max(1, self::positiveInt($request?->query->all()['questions_page'] ?? null)),
+            // The search field posted without JavaScript. Cleaned, and only applied while the
+            // product offers a search, by the component.
+            'search' => self::text($request?->query->all()['questions_search'] ?? null),
         ]);
     }
 
@@ -76,6 +79,11 @@ final readonly class ProductQuestionThemeHook implements ThemeHookInterface
     private static function positiveInt(mixed $value): int
     {
         return \is_string($value) && ctype_digit($value) ? (int) $value : 0;
+    }
+
+    private static function text(mixed $value): string
+    {
+        return \is_string($value) ? mb_substr($value, 0, 200) : '';
     }
 
     /**

@@ -42,25 +42,31 @@ final readonly class PublishedQuestionsPresenter
      * The first $limit published questions of the product, or all of them when $limit is 0, and
      * how many there are in total: what the block needs to offer the next ones.
      *
-     * @return array{questions: list<array{id: int, content: string, answers: list<array{id: int, content: string, official: bool, helpfulCount: int, publishedAt: ?\DateTimeInterface}>}>, total: int}
+     * With a $search, the questions it matches and how many; `published` is always the count of
+     * the product page without it, which is what decides whether the search is offered at all.
+     * The search costs that one count more, the list without one costs nothing more.
+     *
+     * @return array{questions: list<array{id: int, content: string, answers: list<array{id: int, content: string, official: bool, helpfulCount: int, publishedAt: ?\DateTimeInterface}>}>, total: int, published: int}
      */
-    public function forProduct(int $productId, string $locale, int $limit = 0): array
+    public function forProduct(int $productId, string $locale, int $limit = 0, ?string $search = null): array
     {
         if ($productId <= 0 || '' === $locale) {
-            return ['questions' => [], 'total' => 0];
+            return ['questions' => [], 'total' => 0, 'published' => 0];
         }
 
         if ($limit > 0) {
-            $page = $this->storage->findPublishedForProductPage($productId, $locale, 0, $limit);
+            $page = $this->storage->findPublishedForProductPage($productId, $locale, 0, $limit, $search);
             $questions = $page['items'];
             $total = $page['total'];
         } else {
-            $questions = $this->storage->findPublishedForProduct($productId, $locale);
+            $questions = $this->storage->findPublishedForProduct($productId, $locale, $search);
             $total = \count($questions);
         }
 
+        $published = null === $search ? $total : $this->storage->countPublishedForProduct($productId, $locale);
+
         if ([] === $questions) {
-            return ['questions' => [], 'total' => $total];
+            return ['questions' => [], 'total' => $total, 'published' => $published];
         }
 
         $answers = $this->answers->findPublishedForQuestions(array_map(
@@ -81,6 +87,7 @@ final readonly class PublishedQuestionsPresenter
                 $questions,
             ),
             'total' => $total,
+            'published' => $published,
         ];
     }
 

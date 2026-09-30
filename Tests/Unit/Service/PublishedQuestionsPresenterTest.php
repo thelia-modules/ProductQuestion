@@ -146,8 +146,8 @@ final class PublishedQuestionsPresenterTest extends TestCase
             $this->question(1, 12, 'fr_FR', ProductQuestionStatus::Published, 'Q ?'),
         ]), new InMemoryProductQuestionAnswerStorage());
 
-        self::assertSame(['questions' => [], 'total' => 0], $presenter->forProduct(0, 'fr_FR'));
-        self::assertSame(['questions' => [], 'total' => 0], $presenter->forProduct(12, ''));
+        self::assertSame(['questions' => [], 'total' => 0, 'published' => 0], $presenter->forProduct(0, 'fr_FR'));
+        self::assertSame(['questions' => [], 'total' => 0, 'published' => 0], $presenter->forProduct(12, ''));
     }
 
     /**
@@ -171,5 +171,28 @@ final class PublishedQuestionsPresenterTest extends TestCase
 
         self::assertSame(3, $presenter->forProduct(12, 'fr_FR')['total'], 'No limit: every question, counted.');
         self::assertCount(3, $presenter->forProduct(12, 'fr_FR')['questions']);
+    }
+
+    /**
+     * A search narrows the list and its total; the count of the whole page stays, and is the one
+     * query it adds.
+     */
+    public function testASearchNarrowsTheListAndKeepsTheCountOfThePage(): void
+    {
+        $storage = new InMemoryProductQuestionStorage([
+            $this->question(1, 12, 'fr_FR', ProductQuestionStatus::Published, 'Est-il étanche ?'),
+            $this->question(2, 12, 'fr_FR', ProductQuestionStatus::Published, 'Quelle taille ?'),
+            $this->question(3, 12, 'fr_FR', ProductQuestionStatus::Published, 'Étanche sous la pluie ?'),
+        ]);
+        $presenter = new PublishedQuestionsPresenter($storage, new InMemoryProductQuestionAnswerStorage());
+
+        $unfiltered = $presenter->forProduct(12, 'fr_FR');
+        self::assertSame([3, 3], [$unfiltered['total'], $unfiltered['published']]);
+        self::assertSame(0, $storage->publishedCounts, 'Without a search, the list is its own count.');
+
+        $found = $presenter->forProduct(12, 'fr_FR', 0, 'étanche');
+        self::assertSame(['Est-il étanche ?', 'Étanche sous la pluie ?'], array_column($found['questions'], 'content'));
+        self::assertSame([2, 3], [$found['total'], $found['published']]);
+        self::assertSame(1, $storage->publishedCounts);
     }
 }

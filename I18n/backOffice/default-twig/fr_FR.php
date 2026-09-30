@@ -93,4 +93,7 @@ return [
 
     'Questions per page on the product page' => 'Questions par page sur la fiche produit',
     '0 shows every question on one page. Above that, a "Show more" link loads the next ones.' => '0 affiche toutes les questions sur une seule page. Au-delà, un lien « Voir plus de questions » charge les suivantes.',
+
+    'Offer a search above this number of published questions' => 'Proposer une recherche au-delà de ce nombre de questions publiées',
+    '0 never offers a search. The search looks into the questions and their published answers.' => '0 ne propose jamais de recherche. La recherche porte sur les questions et leurs réponses publiées.',
 ];

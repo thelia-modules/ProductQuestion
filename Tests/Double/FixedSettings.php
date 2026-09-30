@@ -21,6 +21,7 @@ final class FixedSettings implements ProductQuestionSettingsInterface
         public bool $customerAnswers = false,
         public bool $closed = false,
         public int $perPage = 0,
+        public int $searchThreshold = 0,
     ) {
     }
 
@@ -52,5 +53,15 @@ final class FixedSettings implements ProductQuestionSettingsInterface
     public function setQuestionsPerPage(int $perPage): void
     {
         $this->perPage = $perPage;
+    }
+
+    public function searchThreshold(): int
+    {
+        return $this->searchThreshold;
+    }
+
+    public function setSearchThreshold(int $threshold): void
+    {
+        $this->searchThreshold = $threshold;
     }
 }

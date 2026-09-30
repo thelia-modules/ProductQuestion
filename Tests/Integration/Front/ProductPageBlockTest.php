@@ -54,6 +54,7 @@ final class ProductPageBlockTest extends WebIntegrationTestCase
         $settings = new ModuleConfigProductQuestionSettings();
         $settings->setQuestionsClosed(false);
         $settings->setQuestionsPerPage(0);
+        $settings->setSearchThreshold(0);
 
         parent::tearDown();
     }
@@ -135,6 +136,48 @@ final class ProductPageBlockTest extends WebIntegrationTestCase
         $block = $this->block('?questions_page=3');
         self::assertCount(5, $block->filter('[data-testid^="product-question-item-"]'));
         self::assertCount(0, $block->filter('[data-testid="product-question-more"]'), 'Nothing left to show.');
+    }
+
+    /**
+     * The field appears above the threshold only, and filters the list without JavaScript
+     * through the page's own URL.
+     */
+    public function testTheSearchAppearsAboveTheThresholdAndFiltersTheList(): void
+    {
+        (new ModuleConfigProductQuestionSettings())->setSearchThreshold(2);
+        $this->publish('Is it waterproof?');
+        $this->publish('How big is it?');
+
+        self::assertCount(0, $this->block()->filter('[data-testid="product-question-search"]'), 'Two questions, threshold two: no search.');
+        self::assertCount(2, $this->block('?questions_search=waterproof')->filter('[data-testid^="product-question-item-"]'), 'A term in the link of a product below the threshold filters nothing.');
+
+        $this->publish('Does it fold?');
+
+        $block = $this->block();
+        self::assertCount(1, $block->filter('[data-testid="product-question-search"] input[name="questions_search"]'));
+
+        $block = $this->block('?questions_search=waterproof');
+        self::assertSame(['Is it waterproof?'], $block->filter('[data-testid^="product-question-item-"] .ProductQuestion-question')->each(static fn (Crawler $node): string => trim($node->text())));
+        self::assertStringContainsString('waterproof', $block->filter('[data-testid="product-question-search-result"]')->text());
+        self::assertSame('waterproof', $block->filter('input[name="questions_search"]')->attr('value'));
+
+        self::assertCount(1, $this->block('?questions_search=nothing-like-it')->filter('[data-testid="product-question-search-result"]'));
+        self::assertCount(0, $this->block('?questions_search=nothing-like-it')->filter('[data-testid^="product-question-item-"]'));
+    }
+
+    /**
+     * The next page of a search keeps the search.
+     */
+    public function testShowMoreKeepsTheSearch(): void
+    {
+        $settings = new ModuleConfigProductQuestionSettings();
+        $settings->setSearchThreshold(1);
+        $settings->setQuestionsPerPage(1);
+        $this->publish('Is it waterproof?');
+        $this->publish('Is it really waterproof?');
+        $this->publish('How big is it?');
+
+        self::assertSame('?questions_page=2&questions_search=waterproof#product-questions', $this->block('?questions_search=waterproof')->filter('[data-testid="product-question-more"]')->attr('href'));
     }
 
     private function publish(string $content, string $locale = 'en_US'): ProductQuestion
