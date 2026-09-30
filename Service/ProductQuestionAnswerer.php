@@ -52,8 +52,10 @@ final readonly class ProductQuestionAnswerer
             throw InvalidProductQuestionException::answerTooLong(self::MAXIMUM_LENGTH);
         }
 
-        // Read before the status moves: this is what tells a first publication from an edit.
-        $firstAnswer = !$question->isAnswered();
+        // Read before the answer is written: this is what tells a first publication from an
+        // edit. The answer, not the status — a refusal keeps the answer, so a question refused
+        // and published again has already been announced to its customer.
+        $firstAnswer = null === $question->getAnswer() || '' === $question->getAnswer();
 
         $question
             ->setAnswer($clean)
