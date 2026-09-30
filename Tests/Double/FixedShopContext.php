@@ -17,13 +17,21 @@ use ProductQuestion\Service\Notification\ShopContextInterface;
 
 final class FixedShopContext implements ShopContextInterface
 {
-    public function __construct(private string $locale = 'fr_FR')
+    /**
+     * @param list<string> $languages
+     */
+    public function __construct(private string $locale = 'fr_FR', private array $languages = ['fr_FR', 'en_US'])
     {
     }
 
     public function defaultLocale(): string
     {
         return $this->locale;
+    }
+
+    public function hasLanguage(string $locale): bool
+    {
+        return \in_array($locale, $this->languages, true);
     }
 
     public function adminUrlOfQuestion(int $questionId): string

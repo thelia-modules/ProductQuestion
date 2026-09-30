@@ -21,6 +21,9 @@ interface ShopContextInterface
 {
     public function defaultLocale(): string;
 
+    /** Whether the shop has this language: a question in any other shows on no product page. */
+    public function hasLanguage(string $locale): bool;
+
     public function adminUrlOfQuestion(int $questionId): string;
 
     public function productUrl(int $productId, string $locale): string;

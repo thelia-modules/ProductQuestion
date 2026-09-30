@@ -15,6 +15,7 @@ namespace ProductQuestion\Service\Notification;
 
 use ProductQuestion\ProductQuestion as ProductQuestionModule;
 use Thelia\Model\Lang;
+use Thelia\Model\LangQuery;
 use Thelia\Tools\URL;
 
 final readonly class TheliaShopContext implements ShopContextInterface
@@ -22,6 +23,11 @@ final readonly class TheliaShopContext implements ShopContextInterface
     public function defaultLocale(): string
     {
         return Lang::getDefaultLanguage()->getLocale() ?? 'en_US';
+    }
+
+    public function hasLanguage(string $locale): bool
+    {
+        return LangQuery::create()->filterByLocale($locale)->exists();
     }
 
     public function adminUrlOfQuestion(int $questionId): string
