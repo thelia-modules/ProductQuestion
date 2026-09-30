@@ -1,0 +1,31 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the ProductQuestion module for Thelia 3.
+ *
+ * (c) OpenStudio <info@thelia.net>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace ProductQuestion\Service;
+
+/**
+ * The shop's choices about the questions block, as the services read them.
+ *
+ * Behind a contract so that the rules which depend on a setting run in a unit test with the
+ * setting either way. Stored in the module's configuration, set from the moderation screen.
+ */
+interface ProductQuestionSettingsInterface
+{
+    /**
+     * Whether customers may answer each other's published questions. Off until the shop turns it
+     * on: an open answer form is one more thing to moderate.
+     */
+    public function allowsCustomerAnswers(): bool;
+
+    public function setAllowsCustomerAnswers(bool $allowed): void;
+}

@@ -9,6 +9,7 @@
                 <th scope="col">{{ 'Customer'|trans({}, domain) }}</th>
                 <th scope="col">{{ 'Language'|trans({}, domain) }}</th>
                 <th scope="col">{{ 'Status'|trans({}, domain) }}</th>
+                <th scope="col">{{ 'Answers waiting'|trans({}, domain) }}</th>
                 <th scope="col">{{ 'Asked on'|trans({}, domain) }}</th>
                 <th scope="col"><span class="visually-hidden">{{ 'Actions'|trans({}, domain) }}</span></th>
             </tr>
@@ -21,6 +22,7 @@
                     <td>{{ row.customerName ?? ('Deleted account'|trans({}, domain)) }}</td>
                     <td>{{ row.locale }}</td>
                     <td><span class="badge text-bg-{{ row.status.css }}">{{ row.status.label }}</span></td>
+                    <td>{% if row.pendingAnswers > 0 %}<span class="badge text-bg-warning" data-testid="product-question-row-pending-answers-{{ row.id }}">{{ row.pendingAnswers }}</span>{% endif %}</td>
                     <td>{{ row.createdAt ? row.createdAt|date('d/m/Y H:i') : '' }}</td>
                     <td class="text-end">
                         <a class="btn btn-sm btn-outline-primary"

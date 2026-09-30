@@ -5,6 +5,7 @@
 {# Read out here: `this` rescopes inside the nested <twig:> components. #}
 {% set labels = this.labels %}
 {% set questions = this.questions %}
+{% set canAnswer = this.canAnswer %}
 
 {# Geometry lives in the module's own stylesheet (assets/product-question.css, linked by the
    theme hook): utility classes only this module uses are not in the theme's Tailwind sources,
@@ -38,6 +39,42 @@
                         </ul>
                     {% else %}
                         <p class="ProductQuestion-noAnswer paragraph-4 text-grey">{{ labels.noAnswer }}</p>
+                    {% endif %}
+
+                    {% if this.answerFeedback and this.answerFeedbackQuestionId == question.id %}
+                        <twig:Molecules:SnackBar:Base variant="{{ this.answerFeedbackIsError ? 'error' : 'success' }}" withIcon text="{{ this.answerFeedback }}" data-testid="product-question-answer-feedback-{{ question.id }}" />
+                    {% endif %}
+
+                    {% if canAnswer %}
+                        {% if this.answeringQuestionId == question.id %}
+                            <div class="ProductQuestion-answerForm" data-testid="product-question-answer-form-{{ question.id }}">
+                                <twig:Fields:TextArea:Base
+                                    label="{{ labels.yourAnswer }}"
+                                    name="answerContent"
+                                    id="product-question-answer-{{ question.id }}-content"
+                                    rows="3"
+                                    value="{{ this.answerContent }}"
+                                    required
+                                    textarea:data-model="answerContent"
+                                    textarea:maxlength="5000"
+                                />
+                                <div class="ProductQuestion-answerActions">
+                                    <twig:Molecules:Button:Base text="{{ labels.sendAnswer }}" data-action="live#action" data-live-action-param="sendAnswer" data-testid="product-question-answer-send-{{ question.id }}" />
+                                    <twig:Molecules:Button:Base text="{{ labels.cancel }}" color="minimal" data-action="live#action" data-live-action-param="cancelAnswer" />
+                                </div>
+                            </div>
+                        {% else %}
+                            <twig:Molecules:Button:Base
+                                text="{{ labels.answerThis }}"
+                                color="secondary"
+                                size="small"
+                                class="ProductQuestion-answerOpen"
+                                data-action="live#action"
+                                data-live-action-param="openAnswer"
+                                data-live-question-id-param="{{ question.id }}"
+                                data-testid="product-question-answer-open-{{ question.id }}"
+                            />
+                        {% endif %}
                     {% endif %}
                 </li>
             {% endfor %}

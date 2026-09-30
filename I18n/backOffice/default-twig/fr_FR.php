@@ -60,4 +60,13 @@ return [
     'Published' => 'Publiée',
     'Answer from the shop' => 'Réponse de la boutique',
     'Found helpful by %count% customer(s)' => 'Utile pour %count% client(s)',
+    'Answers from customers' => 'Réponses des clients',
+    'No customer has answered this question.' => 'Aucun client n’a répondu à cette question.',
+    'Publish' => 'Publier',
+    'Refuse' => 'Refuser',
+    'Publish without answering' => 'Publier sans répondre',
+    'Answers waiting' => 'Réponses en attente',
+    'Let customers answer the published questions' => 'Autoriser les clients à répondre aux questions publiées',
+    'Their answers wait for your approval before they appear on the product page.' => 'Leurs réponses attendent votre validation avant d’apparaître sur la fiche produit.',
+    'Save the settings' => 'Enregistrer les réglages',
 ];

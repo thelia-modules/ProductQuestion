@@ -59,6 +59,45 @@
                         </p>
                     </div>
                 </div>
+
+                <div class="card" data-testid="product-question-customer-answers">
+                    <div class="card-header">{{ 'Answers from customers'|trans({}, domain) }}</div>
+                    {% if customerAnswers is empty %}
+                        <div class="card-body text-muted">{{ 'No customer has answered this question.'|trans({}, domain) }}</div>
+                    {% else %}
+                        <ul class="list-group list-group-flush">
+                            {% for answer in customerAnswers %}
+                                <li class="list-group-item" data-testid="product-question-customer-answer-{{ answer.id }}">
+                                    <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+                                        <span class="badge text-bg-{{ answer.status.css }}" data-testid="product-question-answer-status-{{ answer.id }}">{{ answer.status.label }}</span>
+                                        <span class="text-muted small">
+                                            {{ answer.createdAt ? answer.createdAt|date('d/m/Y H:i') : '' }}
+                                            · {{ 'Found helpful by %count% customer(s)'|trans({'%count%': answer.helpfulCount}, domain) }}
+                                            {% if answer.customerUrl %}
+                                                · <a href="{{ answer.customerUrl }}">{{ 'Open the customer record'|trans({}, domain) }}</a>
+                                            {% else %}
+                                                · {{ 'Deleted account'|trans({}, domain) }}
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <p class="mb-2">{{ answer.content|nl2br }}</p>
+                                    <div class="d-flex gap-2">
+                                        {% for decision in ['publish', 'refuse', 'delete'] %}
+                                            {% if not (decision == 'publish' and answer.status.value == 1) and not (decision == 'refuse' and answer.status.value == 2) %}
+                                                <form method="POST" action="{{ path('productquestion_module_moderate_answer', {answerId: answer.id, decision: decision}) }}">
+                                                    <input type="hidden" name="_token" value="{{ csrfToken }}">
+                                                    <button type="submit" class="btn btn-sm {{ decision == 'publish' ? 'btn-outline-success' : (decision == 'refuse' ? 'btn-outline-danger' : 'btn-outline-secondary') }}" data-testid="product-question-answer-{{ decision }}-{{ answer.id }}">
+                                                        {{ {publish: 'Publish', refuse: 'Refuse', delete: 'Delete'}[decision]|trans({}, domain) }}
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
             </div>
 
             <div class="col-lg-5">
@@ -88,7 +127,15 @@
 
                 <div class="card">
                     <div class="card-header">{{ 'Moderation'|trans({}, domain) }}</div>
-                    <div class="card-body d-flex gap-2">
+                    <div class="card-body d-flex flex-wrap gap-2">
+                        {% if questionStatus.value != 1 %}
+                            <form method="POST" action="{{ path('productquestion_module_publish', {id: question.id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrfToken }}">
+                                <button type="submit" class="btn btn-outline-success" data-testid="product-question-publish-question">
+                                    {{ 'Publish without answering'|trans({}, domain) }}
+                                </button>
+                            </form>
+                        {% endif %}
                         <form method="POST" action="{{ path('productquestion_module_refuse', {id: question.id}) }}">
                             <input type="hidden" name="_token" value="{{ csrfToken }}">
                             <button type="submit" class="btn btn-outline-danger" data-testid="product-question-refuse">

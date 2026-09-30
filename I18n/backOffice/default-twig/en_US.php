@@ -60,4 +60,13 @@ return [
     'Published' => 'Published',
     'Answer from the shop' => 'Answer from the shop',
     'Found helpful by %count% customer(s)' => 'Found helpful by %count% customer(s)',
+    'Answers from customers' => 'Answers from customers',
+    'No customer has answered this question.' => 'No customer has answered this question.',
+    'Publish' => 'Publish',
+    'Refuse' => 'Refuse',
+    'Publish without answering' => 'Publish without answering',
+    'Answers waiting' => 'Answers waiting',
+    'Let customers answer the published questions' => 'Let customers answer the published questions',
+    'Their answers wait for your approval before they appear on the product page.' => 'Their answers wait for your approval before they appear on the product page.',
+    'Save the settings' => 'Save the settings',
 ];

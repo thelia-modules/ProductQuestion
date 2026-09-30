@@ -60,4 +60,19 @@ final class InvalidProductQuestionException extends \DomainException
     {
         return new self('A question must carry the language it was asked in.');
     }
+
+    public static function unknownQuestion(): self
+    {
+        return new self('This question cannot be answered.');
+    }
+
+    public static function customerAnswersClosed(): self
+    {
+        return new self('The shop does not take answers from customers.');
+    }
+
+    public static function answerTooShort(int $minimum): self
+    {
+        return new self(\sprintf('An answer must be at least %d characters long.', $minimum));
+    }
 }

@@ -17,13 +17,17 @@ use ProductQuestion\Exception\InvalidProductQuestionException;
 use ProductQuestion\Form\ProductQuestionAskForm;
 use ProductQuestion\ProductQuestion;
 use ProductQuestion\Service\Front\CurrentCustomerInterface;
+use ProductQuestion\Service\Front\ProductQuestionAnswerLimiter;
 use ProductQuestion\Service\Front\ProductQuestionAskLimiter;
 use ProductQuestion\Service\Front\PublishedQuestionsPresenter;
 use ProductQuestion\Service\ProductQuestionAsker;
+use ProductQuestion\Service\ProductQuestionCustomerAnswerer;
+use ProductQuestion\Service\ProductQuestionSettingsInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
 use Symfony\UX\LiveComponent\Attribute\LiveAction;
+use Symfony\UX\LiveComponent\Attribute\LiveArg;
 use Symfony\UX\LiveComponent\Attribute\LiveProp;
 use Symfony\UX\LiveComponent\ComponentToolsTrait;
 use Symfony\UX\LiveComponent\ComponentWithFormTrait;
@@ -31,7 +35,8 @@ use Symfony\UX\LiveComponent\DefaultActionTrait;
 use Thelia\Core\Form\TheliaFormFactory;
 
 /**
- * The questions block of a product page: the answered questions, and the form to ask one.
+ * The questions block of a product page: the published questions with their answers, the form
+ * to ask one and, when the shop takes them, the form to answer someone else's.
  *
  * The form is drawn for a signed-in customer only; a visitor is invited to sign in instead.
  * Asking goes through ProductQuestionAsker, which is the same door the API uses, so the
@@ -61,6 +66,23 @@ class ProductQuestionBlock
     #[LiveProp]
     public ?string $error = null;
 
+    /** The question the customer opened the answer form under, if any. */
+    #[LiveProp(writable: true)]
+    public ?int $answeringQuestionId = null;
+
+    #[LiveProp(writable: true)]
+    public string $answerContent = '';
+
+    /** Set after an answer is sent, shown under the question it was written for. */
+    #[LiveProp]
+    public ?int $answerFeedbackQuestionId = null;
+
+    #[LiveProp]
+    public ?string $answerFeedback = null;
+
+    #[LiveProp]
+    public bool $answerFeedbackIsError = false;
+
     public function __construct(
         private readonly TheliaFormFactory $formFactory,
         private readonly ProductQuestionAsker $asker,
@@ -70,6 +92,9 @@ class ProductQuestionBlock
         // Thelia's own translator, the one carrying the module catalogues: Twig's |trans on
         // the front office knows the theme catalogue only.
         private readonly TranslatorInterface $translator,
+        private readonly ProductQuestionCustomerAnswerer $customerAnswerer,
+        private readonly ProductQuestionAnswerLimiter $answerLimiter,
+        private readonly ProductQuestionSettingsInterface $settings,
     ) {
     }
 
@@ -88,6 +113,10 @@ class ProductQuestionBlock
             'send' => $this->trans('Send my question'),
             'signIn' => $this->trans('Sign in to ask a question about this product.'),
             'signInLink' => $this->trans('Sign in'),
+            'answerThis' => $this->trans('Answer this question'),
+            'yourAnswer' => $this->trans('Your answer'),
+            'sendAnswer' => $this->trans('Send my answer'),
+            'cancel' => $this->trans('Cancel'),
         ];
     }
 
@@ -102,6 +131,70 @@ class ProductQuestionBlock
     public function canAsk(): bool
     {
         return null !== $this->currentCustomer->id();
+    }
+
+    public function canAnswer(): bool
+    {
+        return $this->settings->allowsCustomerAnswers() && null !== $this->currentCustomer->id();
+    }
+
+    #[LiveAction]
+    public function openAnswer(#[LiveArg] int $questionId): void
+    {
+        $this->answeringQuestionId = $questionId;
+        $this->answerContent = '';
+        $this->answerFeedbackQuestionId = null;
+        $this->answerFeedback = null;
+    }
+
+    #[LiveAction]
+    public function cancelAnswer(): void
+    {
+        $this->answeringQuestionId = null;
+        $this->answerContent = '';
+    }
+
+    #[LiveAction]
+    public function sendAnswer(): void
+    {
+        $questionId = (int) $this->answeringQuestionId;
+        $this->answerFeedbackQuestionId = $questionId;
+        $this->answerFeedbackIsError = true;
+
+        $customerId = $this->currentCustomer->id();
+
+        if (null === $customerId || !$this->settings->allowsCustomerAnswers()) {
+            $this->answerFeedback = $this->trans('Sign in to answer this question.');
+
+            return;
+        }
+
+        // A text the service refuses spends nothing; the budget is spent on an answer about to be
+        // written, as for the questions.
+        if (mb_strlen(trim($this->answerContent)) < ProductQuestionCustomerAnswerer::MINIMUM_LENGTH) {
+            $this->answerFeedback = $this->trans('Your answer could not be sent. Please check it and try again.');
+
+            return;
+        }
+
+        if (!$this->answerLimiter->allows($customerId)) {
+            $this->answerFeedback = $this->trans('Too many answers have been sent. Please try again later.');
+
+            return;
+        }
+
+        try {
+            $this->customerAnswerer->answer($questionId, $customerId, $this->answerContent);
+        } catch (InvalidProductQuestionException) {
+            $this->answerFeedback = $this->trans('Your answer could not be sent. Please check it and try again.');
+
+            return;
+        }
+
+        $this->answerFeedbackIsError = false;
+        $this->answerFeedback = $this->trans('Thank you! Your answer has been sent to the shop and will appear here once published.');
+        $this->answeringQuestionId = null;
+        $this->answerContent = '';
     }
 
     #[LiveAction]

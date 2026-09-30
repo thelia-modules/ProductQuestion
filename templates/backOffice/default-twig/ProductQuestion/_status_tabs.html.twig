@@ -3,7 +3,7 @@
 
 <ul class="nav nav-pills mb-3" data-testid="product-question-status-tabs">
     <li class="nav-item">
-        <a class="nav-link {{ filters.status is null ? 'active' : '' }}"
+        <a class="nav-link {{ filters.status is null and not filters.pendingAnswers ? 'active' : '' }}"
            href="{{ base }}?{{ filters.withoutFilter('status').toQueryParams|url_encode }}">
             {{ 'All'|trans({}, domain) }}
             <span class="badge text-bg-light">{{ counts|reduce((carry, n) => carry + n, 0) }}</span>
@@ -11,7 +11,7 @@
     </li>
     {% for entry in statuses %}
         <li class="nav-item">
-            <a class="nav-link {{ filters.status == entry.value ? 'active' : '' }}"
+            <a class="nav-link {{ filters.status == entry.value and not filters.pendingAnswers ? 'active' : '' }}"
                href="{{ base }}?{{ filters.withStatus(entry.value).toQueryParams|url_encode }}"
                data-testid="product-question-tab-{{ entry.value }}">
                 {{ entry.label }}
@@ -19,4 +19,12 @@
             </a>
         </li>
     {% endfor %}
+    <li class="nav-item">
+        <a class="nav-link {{ filters.pendingAnswers ? 'active' : '' }}"
+           href="{{ base }}?{{ filters.withPendingAnswers.toQueryParams|url_encode }}"
+           data-testid="product-question-tab-pending-answers">
+            {{ 'Answers waiting'|trans({}, domain) }}
+            <span class="badge text-bg-warning">{{ pendingAnswers }}</span>
+        </a>
+    </li>
 </ul>
