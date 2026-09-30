@@ -16,9 +16,13 @@ namespace ProductQuestion\Tests\Unit\Service;
 use PHPUnit\Framework\TestCase;
 use ProductQuestion\Event\ProductQuestionCreatedEvent;
 use ProductQuestion\Exception\InvalidProductQuestionException;
+use ProductQuestion\Exception\ProductQuestionsClosedException;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Service\Front\ProductQuestionTextSanitizer;
 use ProductQuestion\Service\ProductQuestionAsker;
+use ProductQuestion\Service\ProductQuestionAvailability;
+use ProductQuestion\Tests\Double\FixedSettings;
+use ProductQuestion\Tests\Double\InMemoryClosedProducts;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionStorage;
 use ProductQuestion\Tests\Double\InMemoryProductVisibility;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -31,15 +35,22 @@ final class ProductQuestionAskerTest extends TestCase
 
     private ProductQuestionAsker $asker;
 
+    private FixedSettings $settings;
+
+    private InMemoryClosedProducts $closedProducts;
+
     protected function setUp(): void
     {
         $this->storage = new InMemoryProductQuestionStorage();
         $this->dispatcher = new EventDispatcher();
+        $this->settings = new FixedSettings();
+        $this->closedProducts = new InMemoryClosedProducts();
         $this->asker = new ProductQuestionAsker(
             $this->storage,
             new ProductQuestionTextSanitizer(),
             $this->dispatcher,
             new InMemoryProductVisibility([12]),
+            new ProductQuestionAvailability($this->settings, $this->closedProducts),
         );
     }
 
@@ -168,5 +179,31 @@ final class ProductQuestionAskerTest extends TestCase
         }
 
         self::assertSame([], $this->storage->saved);
+    }
+
+    /**
+     * The form is gone from a closed product's page; this is what refuses a post that comes from
+     * anywhere else, the API included.
+     */
+    public function testAQuestionAboutAClosedProductIsRefusedAndNotStored(): void
+    {
+        $this->closedProducts->setClosed(12, true);
+
+        try {
+            $this->asker->ask(12, 34, 'fr_FR', 'Est-ce compatible avec le modele 2024 ?');
+            self::fail('A question about a closed product was stored.');
+        } catch (ProductQuestionsClosedException) {
+        }
+
+        self::assertSame([], $this->storage->saved);
+    }
+
+    public function testNoQuestionIsTakenWhileTheWholeShopIsClosed(): void
+    {
+        $this->settings->setQuestionsClosed(true);
+
+        $this->expectException(ProductQuestionsClosedException::class);
+
+        $this->asker->ask(12, 34, 'fr_FR', 'Est-ce compatible avec le modele 2024 ?');
     }
 }

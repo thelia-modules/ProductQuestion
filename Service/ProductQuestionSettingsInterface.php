@@ -28,4 +28,12 @@ interface ProductQuestionSettingsInterface
     public function allowsCustomerAnswers(): bool;
 
     public function setAllowsCustomerAnswers(bool $allowed): void;
+
+    /**
+     * Whether the whole shop is closed to new questions. The published questions stay on the
+     * product pages; only asking and answering stop. Open until the shop closes it.
+     */
+    public function questionsClosed(): bool;
+
+    public function setQuestionsClosed(bool $closed): void;
 }

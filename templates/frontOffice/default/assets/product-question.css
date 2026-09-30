@@ -134,6 +134,10 @@
   margin: 2.5rem 0 0;
 }
 
+.ProductQuestion-closed {
+  margin: 2.5rem 0 0;
+}
+
 .ProductQuestion-signInLink {
   text-decoration: underline;
   text-underline-offset: 0.2em;

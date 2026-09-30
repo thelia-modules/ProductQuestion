@@ -18,6 +18,7 @@ use ProductQuestion\ProductQuestion;
 final readonly class ModuleConfigProductQuestionSettings implements ProductQuestionSettingsInterface
 {
     public const ALLOW_CUSTOMER_ANSWERS = 'allow_customer_answers';
+    public const QUESTIONS_CLOSED = 'questions_closed';
 
     public function allowsCustomerAnswers(): bool
     {
@@ -28,5 +29,15 @@ final readonly class ModuleConfigProductQuestionSettings implements ProductQuest
     public function setAllowsCustomerAnswers(bool $allowed): void
     {
         ProductQuestion::setConfigValue(self::ALLOW_CUSTOMER_ANSWERS, $allowed ? '1' : '0');
+    }
+
+    public function questionsClosed(): bool
+    {
+        return '1' === ProductQuestion::getConfigValue(self::QUESTIONS_CLOSED, '0');
+    }
+
+    public function setQuestionsClosed(bool $closed): void
+    {
+        ProductQuestion::setConfigValue(self::QUESTIONS_CLOSED, $closed ? '1' : '0');
     }
 }

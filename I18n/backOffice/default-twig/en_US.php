@@ -72,4 +72,11 @@ return [
     'Emails to the author about new answers' => 'Emails to the author about new answers',
     'On' => 'On',
     'Stopped by the author' => 'Stopped by the author',
+
+    'Close the whole shop to new questions' => 'Close the whole shop to new questions',
+    'The questions already published stay on the product pages. A product can also be closed on its own, from the Modules tab of its edit page.' => 'The questions already published stay on the product pages. A product can also be closed on its own, from the Modules tab of its edit page.',
+    'Close this product to new questions' => 'Close this product to new questions',
+    'The questions already published stay on the product page.' => 'The questions already published stay on the product page.',
+    'Questions are closed on the whole shop for now, whatever this product says.' => 'Questions are closed on the whole shop for now, whatever this product says.',
+    'Save' => 'Save',
 ];

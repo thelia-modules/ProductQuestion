@@ -5,6 +5,11 @@
 <form method="POST" action="{{ path('productquestion_module_settings') }}" class="card card-body mb-3" data-testid="product-question-settings">
     <input type="hidden" name="_token" value="{{ csrfToken }}">
     <div class="form-check form-switch mb-2">
+        <input class="form-check-input" type="checkbox" role="switch" id="pq-questions-closed" name="questions_closed" value="1" {{ questionsClosed ? 'checked' : '' }}>
+        <label class="form-check-label" for="pq-questions-closed">{{ 'Close the whole shop to new questions'|trans({}, domain) }}</label>
+    </div>
+    <p class="text-muted small mb-2">{{ 'The questions already published stay on the product pages. A product can also be closed on its own, from the Modules tab of its edit page.'|trans({}, domain) }}</p>
+    <div class="form-check form-switch mb-2">
         <input class="form-check-input" type="checkbox" role="switch" id="pq-allow-customer-answers" name="allow_customer_answers" value="1" {{ allowsCustomerAnswers ? 'checked' : '' }}>
         <label class="form-check-label" for="pq-allow-customer-answers">{{ 'Let customers answer the published questions'|trans({}, domain) }}</label>
     </div>

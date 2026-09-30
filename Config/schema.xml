@@ -114,5 +114,19 @@
         </index>
     </table>
 
+    <!-- The products the shop closed to new questions. A row is a closed product; no row, the
+         shop-wide setting decides. Kept by the module rather than as a column of product, which
+         would need a release of the core schema. -->
+    <table name="product_question_closed_product">
+        <column name="product_id" primaryKey="true" required="true" type="INTEGER" />
+
+        <behavior name="timestampable" />
+
+        <!-- Deleting the product takes its setting with it, as it takes its questions. -->
+        <foreign-key foreignTable="product" name="fk_product_question_closed_product_product_id" onDelete="CASCADE" onUpdate="RESTRICT">
+            <reference foreign="id" local="product_id" />
+        </foreign-key>
+    </table>
+
     <external-schema filename="local/config/schema.xml" referenceOnly="true" />
 </database>

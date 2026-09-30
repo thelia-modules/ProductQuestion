@@ -17,6 +17,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use ProductQuestion\Api\Resource\ProductQuestion as ProductQuestionResource;
 use ProductQuestion\Exception\InvalidProductQuestionException;
+use ProductQuestion\Exception\ProductQuestionsClosedException;
 use ProductQuestion\Service\Api\ProductQuestionPayloadMapper;
 use ProductQuestion\Service\Front\CurrentCustomerInterface;
 use ProductQuestion\Service\Front\ProductQuestionAskLimiter;
@@ -82,6 +83,9 @@ final readonly class ProductQuestionPostProcessor implements ProcessorInterface
             $question = $this->asker->ask($productId, $customerId, $locale, $data->content);
         } catch (InvalidProductQuestionException $exception) {
             throw new UnprocessableEntityHttpException($exception->getMessage(), $exception);
+        } catch (ProductQuestionsClosedException $exception) {
+            // The text may be fine: the product does not take questions.
+            throw new AccessDeniedHttpException('This product no longer takes questions.', $exception);
         }
 
         return $this->mapper->toResource($question);

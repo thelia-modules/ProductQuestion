@@ -15,6 +15,8 @@ namespace ProductQuestion;
 
 use ProductQuestion\Install\ProductQuestionMessageInstaller;
 use ProductQuestion\Install\ProductQuestionSchemaUpgrader;
+use ProductQuestion\Repository\ClosedProductRepository;
+use ProductQuestion\Repository\ClosedProductStorageInterface;
 use ProductQuestion\Repository\ProductQuestionAnswerRepository;
 use ProductQuestion\Repository\ProductQuestionAnswerStorageInterface;
 use ProductQuestion\Repository\ProductQuestionRepository;
@@ -119,6 +121,7 @@ final class ProductQuestion extends BaseModule
         $con ??= Propel::getConnection();
 
         // Children first: the foreign keys would refuse the parent while they are there.
+        $con->exec('DROP TABLE IF EXISTS `product_question_closed_product`');
         $con->exec('DROP TABLE IF EXISTS `product_question_answer_vote`');
         $con->exec('DROP TABLE IF EXISTS `product_question_answer`');
         $con->exec('DROP TABLE IF EXISTS `product_question`');
@@ -206,6 +209,7 @@ final class ProductQuestion extends BaseModule
         $servicesConfigurator->alias(ProductQuestionAnswerStorageInterface::class, ProductQuestionAnswerRepository::class);
         $servicesConfigurator->alias(ProductTitleSourceInterface::class, ProductTitleRepository::class);
         $servicesConfigurator->alias(ProductVisibilityInterface::class, ProductVisibilityRepository::class);
+        $servicesConfigurator->alias(ClosedProductStorageInterface::class, ClosedProductRepository::class);
         $servicesConfigurator->alias(CurrentCustomerInterface::class, SecurityContextCurrentCustomer::class);
         $servicesConfigurator->alias(ShopContextInterface::class, TheliaShopContext::class);
         $servicesConfigurator->alias(CustomerMailerInterface::class, TheliaCustomerMailer::class);

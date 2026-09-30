@@ -87,4 +87,16 @@ final class ProductQuestionBlockTemplateTest extends TestCase
     {
         self::assertStringContainsString("component('ProductQuestion', {productId: productId, locale: locale})", $this->hookTemplate);
     }
+
+    /**
+     * Closed: no form and no invitation to sign in, the published questions still listed; with
+     * none published, an empty root and nothing on the page.
+     */
+    public function testAClosedProductKeepsItsQuestionsAndLosesItsForm(): void
+    {
+        self::assertMatchesRegularExpression('/public function canAsk\(\): bool\s*\{\s*return \$this->isOpen\(\) &&/', $this->component);
+        self::assertMatchesRegularExpression('/public function canAnswer\(\): bool\s*\{[^}]*\$this->isOpen\(\)/', $this->component);
+        self::assertMatchesRegularExpression('/\{% elseif not open %\}\s*<p class="ProductQuestion-closed/', $this->template);
+        self::assertMatchesRegularExpression('/\{% if not open and questions is empty %\}\s*<section [^>]* hidden /', $this->template);
+    }
 }

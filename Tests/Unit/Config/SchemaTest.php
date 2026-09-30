@@ -136,7 +136,7 @@ final class SchemaTest extends TestCase
     {
         $upgrader = (string) file_get_contents(\dirname(__DIR__, 3).'/Install/ProductQuestionSchemaUpgrader.php');
 
-        foreach (['product_question_answer', 'product_question_answer_vote'] as $table) {
+        foreach (['product_question_answer', 'product_question_answer_vote', 'product_question_closed_product'] as $table) {
             self::assertSame(1, preg_match('#CREATE TABLE `'.$table.'`\s*\((.*?)\) ENGINE=InnoDB;#s', $this->sql, $fresh));
             self::assertSame(1, preg_match('#CREATE TABLE `'.$table.'`\s*\((.*?)\) ENGINE=InnoDB\n#s', $upgrader, $upgrade));
             self::assertSame(
@@ -145,6 +145,15 @@ final class SchemaTest extends TestCase
                 $table.' differs between TheliaMain.sql and the upgrader',
             );
         }
+    }
+
+    /**
+     * The setting of a deleted product goes with it, as its questions do.
+     */
+    public function testAClosedProductRowFollowsItsProduct(): void
+    {
+        self::assertMatchesRegularExpression('#CONSTRAINT `fk_product_question_closed_product_product_id`\s*FOREIGN KEY \(`product_id`\)\s*REFERENCES `product` \(`id`\)\s*ON UPDATE RESTRICT\s*ON DELETE CASCADE#', $this->sql);
+        self::assertMatchesRegularExpression('#<table name="product_question_closed_product">.*?foreignTable="product"[^>]*onDelete="CASCADE"#s', $this->schema);
     }
 
     /**
