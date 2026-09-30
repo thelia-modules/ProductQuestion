@@ -46,13 +46,18 @@ final readonly class PublishedQuestionsPresenter
      * the product page without it, which is what decides whether the search is offered at all.
      * The search costs that one count more, the list without one costs nothing more.
      *
-     * @return array{questions: list<array{id: int, content: string, answers: list<array{id: int, content: string, official: bool, helpfulCount: int, publishedAt: ?\DateTimeInterface}>}>, total: int, published: int}
+     * With $allLanguages, the questions of every language, each carrying the one it was asked
+     * in; $locale is still required, being the language the page is read in.
+     *
+     * @return array{questions: list<array{id: int, content: string, locale: string, answers: list<array{id: int, content: string, official: bool, helpfulCount: int, publishedAt: ?\DateTimeInterface}>}>, total: int, published: int}
      */
-    public function forProduct(int $productId, string $locale, int $limit = 0, ?string $search = null): array
+    public function forProduct(int $productId, string $locale, int $limit = 0, ?string $search = null, bool $allLanguages = false): array
     {
         if ($productId <= 0 || '' === $locale) {
             return ['questions' => [], 'total' => 0, 'published' => 0];
         }
+
+        $locale = $allLanguages ? null : $locale;
 
         if ($limit > 0) {
             $page = $this->storage->findPublishedForProductPage($productId, $locale, 0, $limit, $search);
@@ -79,6 +84,7 @@ final readonly class PublishedQuestionsPresenter
                 static fn (ProductQuestion $question): array => [
                     'id' => (int) $question->getId(),
                     'content' => (string) $question->getContent(),
+                    'locale' => (string) $question->getLocale(),
                     'answers' => array_map(
                         self::answer(...),
                         $answers[(int) $question->getId()] ?? [],

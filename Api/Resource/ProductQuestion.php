@@ -34,6 +34,9 @@ use Symfony\Component\Validator\Constraints\NotBlank;
  * helpful), and for a client written against 1.2.0 the shop's answer and its date on their
  * own. Neither who asked nor who answered is ever readable, and the list is public.
  *
+ * The list is in one language, `locale` or the request's. A shop that shows every language on its
+ * product pages lists them all when `locale` is left out, each question with its own.
+ *
  * `search` narrows the list to the questions whose text, or one of whose published answers,
  * contains the term, once the product has more published questions than the threshold the shop
  * set. Below it, or with no threshold, the parameter is ignored: the list is the product page's.

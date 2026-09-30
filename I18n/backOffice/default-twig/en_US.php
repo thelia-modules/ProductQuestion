@@ -96,4 +96,7 @@ return [
 
     'Offer a search above this number of published questions' => 'Offer a search above this number of published questions',
     '0 never offers a search. The search looks into the questions and their published answers.' => '0 never offers a search. The search looks into the questions and their published answers.',
+
+    'Show the questions of every language on the product pages' => 'Show the questions of every language on the product pages',
+    'Each question then says the language it was asked in. Off, a page shows the questions of the language it is read in.' => 'Each question then says the language it was asked in. Off, a page shows the questions of the language it is read in.',
 ];

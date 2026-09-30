@@ -166,6 +166,7 @@ class ProductQuestionBlock
             'searchClear' => $this->trans('Clear the search'),
             'searchFound' => $this->trans('%count% question(s) match "%term%".'),
             'searchNone' => $this->trans('No question matches "%term%".'),
+            'askedIn' => $this->trans('Asked in %language%'),
         ];
     }
 
@@ -223,6 +224,27 @@ class ProductQuestionBlock
     public function getSearchTotal(): int
     {
         return $this->published()['total'];
+    }
+
+    /**
+     * The name of the language a question was asked in, in the language of the page: "French" on
+     * the English page, "anglais" on the French one.
+     */
+    public function languageName(string $questionLocale): string
+    {
+        $name = \Locale::getDisplayLanguage($questionLocale, $this->locale);
+
+        if ('' === $name || $name === $questionLocale) {
+            return $questionLocale;
+        }
+
+        return mb_strtoupper(mb_substr($name, 0, 1)).mb_substr($name, 1);
+    }
+
+    /** The lang attribute of a question asked in another language than the page's. */
+    public function htmlLang(string $questionLocale): string
+    {
+        return str_replace('_', '-', $questionLocale);
     }
 
     /** A new search starts from the first page of its results. */
@@ -418,13 +440,14 @@ class ProductQuestionBlock
 
         // Not a query more when the shop offers no search at all.
         $search = $this->searchOffer->isEnabled() ? QuestionSearchTerm::normalize($this->search) : null;
-        $published = $this->presenter->forProduct($this->productId, $this->locale, $this->shownLimit(), $search);
+        $allLanguages = $this->settings->showsAllLanguages();
+        $published = $this->presenter->forProduct($this->productId, $this->locale, $this->shownLimit(), $search, $allLanguages);
 
         // A term in the link of a product below the threshold: the field is not on the page, so
         // the list is not filtered either.
         if (null !== $search && !$this->searchOffer->isOfferedFor($published['published'])) {
             $search = null;
-            $published = $this->presenter->forProduct($this->productId, $this->locale, $this->shownLimit());
+            $published = $this->presenter->forProduct($this->productId, $this->locale, $this->shownLimit(), null, $allLanguages);
         }
 
         $this->appliedSearch = $search;

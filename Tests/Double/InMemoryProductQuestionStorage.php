@@ -67,7 +67,7 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
     /**
      * @return list<ProductQuestion>
      */
-    public function findPublishedForProduct(int $productId, string $locale, ?string $search = null): array
+    public function findPublishedForProduct(int $productId, ?string $locale, ?string $search = null): array
     {
         $found = [];
 
@@ -76,7 +76,7 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
                 continue;
             }
 
-            if ($question->getLocale() !== $locale) {
+            if (null !== $locale && $question->getLocale() !== $locale) {
                 continue;
             }
 
@@ -102,7 +102,7 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
     /**
      * @return array{items: list<ProductQuestion>, total: int}
      */
-    public function findPublishedForProductPage(int $productId, string $locale, int $offset, int $limit, ?string $search = null): array
+    public function findPublishedForProductPage(int $productId, ?string $locale, int $offset, int $limit, ?string $search = null): array
     {
         $this->publishedPageCalls[] = ['offset' => $offset, 'limit' => $limit];
 
@@ -111,7 +111,7 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
         return ['items' => \array_slice($all, $offset, $limit), 'total' => \count($all)];
     }
 
-    public function countPublishedForProduct(int $productId, string $locale): int
+    public function countPublishedForProduct(int $productId, ?string $locale): int
     {
         ++$this->publishedCounts;
 

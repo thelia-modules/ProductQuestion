@@ -96,4 +96,7 @@ return [
 
     'Offer a search above this number of published questions' => 'Proposer une recherche au-delà de ce nombre de questions publiées',
     '0 never offers a search. The search looks into the questions and their published answers.' => '0 ne propose jamais de recherche. La recherche porte sur les questions et leurs réponses publiées.',
+
+    'Show the questions of every language on the product pages' => 'Afficher les questions de toutes les langues sur les fiches produits',
+    'Each question then says the language it was asked in. Off, a page shows the questions of the language it is read in.' => 'Chaque question indique alors la langue dans laquelle elle a été posée. Désactivé, une fiche affiche les questions de la langue dans laquelle elle est lue.',
 ];

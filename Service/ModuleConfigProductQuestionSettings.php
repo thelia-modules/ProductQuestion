@@ -21,6 +21,7 @@ final readonly class ModuleConfigProductQuestionSettings implements ProductQuest
     public const QUESTIONS_CLOSED = 'questions_closed';
     public const QUESTIONS_PER_PAGE = 'questions_per_page';
     public const SEARCH_THRESHOLD = 'search_threshold';
+    public const ALL_LANGUAGES = 'show_all_languages';
 
     public const MAXIMUM_SEARCH_THRESHOLD = 10000;
 
@@ -66,6 +67,16 @@ final readonly class ModuleConfigProductQuestionSettings implements ProductQuest
     public function setSearchThreshold(int $threshold): void
     {
         ProductQuestion::setConfigValue(self::SEARCH_THRESHOLD, (string) self::bounded((string) $threshold, self::MAXIMUM_SEARCH_THRESHOLD));
+    }
+
+    public function showsAllLanguages(): bool
+    {
+        return '1' === ProductQuestion::getConfigValue(self::ALL_LANGUAGES, '0');
+    }
+
+    public function setShowsAllLanguages(bool $all): void
+    {
+        ProductQuestion::setConfigValue(self::ALL_LANGUAGES, $all ? '1' : '0');
     }
 
     /**

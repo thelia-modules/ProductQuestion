@@ -136,7 +136,7 @@ final class PublishedQuestionsPresenterTest extends TestCase
 
         $rows = $presenter->forProduct(12, 'fr_FR')['questions'];
 
-        self::assertSame(['id', 'content', 'answers'], array_keys($rows[0]));
+        self::assertSame(['id', 'content', 'locale', 'answers'], array_keys($rows[0]));
         self::assertSame(['id', 'content', 'official', 'helpfulCount', 'publishedAt'], array_keys($rows[0]['answers'][0]));
     }
 
@@ -194,5 +194,24 @@ final class PublishedQuestionsPresenterTest extends TestCase
         self::assertSame(['Est-il étanche ?', 'Étanche sous la pluie ?'], array_column($found['questions'], 'content'));
         self::assertSame([2, 3], [$found['total'], $found['published']]);
         self::assertSame(1, $storage->publishedCounts);
+    }
+
+    /**
+     * Every language when the shop shows them all, each question with its own; the language of
+     * the page otherwise.
+     */
+    public function testEveryLanguageIsShownWhenAskedWithTheLanguageOfEachQuestion(): void
+    {
+        $presenter = new PublishedQuestionsPresenter(new InMemoryProductQuestionStorage([
+            $this->question(1, 12, 'fr_FR', ProductQuestionStatus::Published, 'Est-ce pliable ?'),
+            $this->question(2, 12, 'en_US', ProductQuestionStatus::Published, 'Does it fold?'),
+            $this->question(3, 12, 'en_US', ProductQuestionStatus::Pending, 'Pending?'),
+        ]), new InMemoryProductQuestionAnswerStorage());
+
+        self::assertSame(['en_US'], array_column($presenter->forProduct(12, 'en_US')['questions'], 'locale'));
+
+        $all = $presenter->forProduct(12, 'en_US', 0, null, true);
+        self::assertSame(['fr_FR', 'en_US'], array_column($all['questions'], 'locale'));
+        self::assertSame(2, $all['total']);
     }
 }

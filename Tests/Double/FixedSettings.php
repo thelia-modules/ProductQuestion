@@ -22,6 +22,7 @@ final class FixedSettings implements ProductQuestionSettingsInterface
         public bool $closed = false,
         public int $perPage = 0,
         public int $searchThreshold = 0,
+        public bool $allLanguages = false,
     ) {
     }
 
@@ -63,5 +64,15 @@ final class FixedSettings implements ProductQuestionSettingsInterface
     public function setSearchThreshold(int $threshold): void
     {
         $this->searchThreshold = $threshold;
+    }
+
+    public function showsAllLanguages(): bool
+    {
+        return $this->allLanguages;
+    }
+
+    public function setShowsAllLanguages(bool $all): void
+    {
+        $this->allLanguages = $all;
     }
 }

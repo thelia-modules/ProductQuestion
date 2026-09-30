@@ -31,16 +31,17 @@ interface ProductQuestionStorageInterface
     /**
      * The published questions of one product, in one language, the most helpful first.
      *
-     * Neither the status nor the language is optional. This is what a visitor may read, and
+     * The status is never optional. This is what a visitor may read, and
      * the front office reads nothing else: a pending or refused question must never become
      * readable because a query parameter asked for it.
      *
      * $search, already normalized by QuestionSearchTerm, keeps the questions whose text or one
-     * of whose published answers contains it.
+     * of whose published answers contains it. A null $locale is every language: what a shop that
+     * shows them all reads, never something a visitor's parameter can reach by itself.
      *
      * @return list<ProductQuestion>
      */
-    public function findPublishedForProduct(int $productId, string $locale, ?string $search = null): array;
+    public function findPublishedForProduct(int $productId, ?string $locale, ?string $search = null): array;
 
     /**
      * One page of the same list, and how many rows it has in total: what the public API serves,
@@ -48,10 +49,10 @@ interface ProductQuestionStorageInterface
      *
      * @return array{items: list<ProductQuestion>, total: int}
      */
-    public function findPublishedForProductPage(int $productId, string $locale, int $offset, int $limit, ?string $search = null): array;
+    public function findPublishedForProductPage(int $productId, ?string $locale, int $offset, int $limit, ?string $search = null): array;
 
     /** How many questions the product page has, before any search. An indexed count. */
-    public function countPublishedForProduct(int $productId, string $locale): int;
+    public function countPublishedForProduct(int $productId, ?string $locale): int;
 
     /**
      * Every question one customer asked, whatever its status, oldest first: what a personal

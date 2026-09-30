@@ -14,6 +14,11 @@
         <label class="form-check-label" for="pq-allow-customer-answers">{{ 'Let customers answer the published questions'|trans({}, domain) }}</label>
     </div>
     <p class="text-muted small mb-2">{{ 'Their answers wait for your approval before they appear on the product page.'|trans({}, domain) }}</p>
+    <div class="form-check form-switch mb-2">
+        <input class="form-check-input" type="checkbox" role="switch" id="pq-all-languages" name="show_all_languages" value="1" {{ showsAllLanguages ? 'checked' : '' }}>
+        <label class="form-check-label" for="pq-all-languages">{{ 'Show the questions of every language on the product pages'|trans({}, domain) }}</label>
+    </div>
+    <p class="text-muted small mb-2">{{ 'Each question then says the language it was asked in. Off, a page shows the questions of the language it is read in.'|trans({}, domain) }}</p>
     <div class="row g-2 mb-2">
         <div class="col-auto">
             <label class="form-label" for="pq-questions-per-page">{{ 'Questions per page on the product page'|trans({}, domain) }}</label>

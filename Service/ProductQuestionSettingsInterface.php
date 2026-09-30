@@ -52,4 +52,13 @@ interface ProductQuestionSettingsInterface
     public function searchThreshold(): int;
 
     public function setSearchThreshold(int $threshold): void;
+
+    /**
+     * Whether a product page shows the published questions of every language, each with the
+     * language it was asked in. Off: the page shows those of the language being browsed only, as
+     * the module always did.
+     */
+    public function showsAllLanguages(): bool;
+
+    public function setShowsAllLanguages(bool $all): void;
 }
