@@ -147,6 +147,30 @@ final class ModerationScreensTest extends WebIntegrationTestCase
     }
 
     /**
+     * The list shows who asked, and leaves the questions it read as they were: a question nobody
+     * owns any more is saved afterwards without breaking its foreign key.
+     */
+    public function testTheListNamesTheCustomerAndLeavesTheQuestionsUntouched(): void
+    {
+        $customer = $this->factory->customer($this->factory->customerTitle(), ['firstname' => 'Kenji', 'lastname' => 'Asker']);
+        $owned = (new ProductQuestion())
+            ->setProductId((int) $this->question->getProductId())
+            ->setCustomerId((int) $customer->getId())
+            ->setLocale('en_US')
+            ->setContent('Owned question?')
+            ->setStatusEnum(ProductQuestionStatus::Pending);
+        $owned->save();
+
+        $crawler = $this->client->request('GET', self::LIST_URL.'?product_id='.$this->question->getProductId());
+
+        self::assertStringContainsString('Kenji Asker', $crawler->filter('[data-testid="product-question-row-'.$owned->getId().'"]')->text());
+        self::assertNull($this->question->getCustomerId(), 'The list gave the question nobody owns a customer of its own.');
+
+        $this->question->setContent('Edited after the list was drawn?')->save();
+        self::assertNull(ProductQuestionQuery::create()->findPk($this->question->getId())?->getCustomerId());
+    }
+
+    /**
      * The menu entry counts what waits for a moderator: questions and customer answers alike.
      */
     public function testTheMenuShowsHowManyItemsWaitForAModerator(): void

@@ -18,6 +18,7 @@ use ProductQuestion\Model\ProductQuestionQuery;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Service\BackOffice\ProductQuestionListFilters;
 use Propel\Runtime\ActiveQuery\Criteria;
+use Thelia\Model\CustomerQuery;
 
 /**
  * Every Propel query this module makes.
@@ -144,13 +145,12 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
         };
 
         $items = $query
-            // The list shows who asked. Without this the customer of every row is one query
-            // of its own, and the deleted ones would drop the row entirely on an inner join.
-            ->joinWith('Customer', Criteria::LEFT_JOIN)
             ->offset($filters->offset())
             ->limit($filters->limit)
             ->find()
             ->getData();
+
+        $this->attachCustomers($items);
 
         return ['items' => $items, 'total' => $total];
     }
@@ -180,6 +180,42 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
         }
 
         return array_values(array_unique($locales));
+    }
+
+    /**
+     * The list shows who asked: the customers of a page are read in one query, rather than one
+     * query per row.
+     *
+     * Not a joinWith('Customer', LEFT JOIN): on a question nobody owns any more, the join
+     * hydrates an empty customer and sets the question's customer_id to 0. The question sits in
+     * the instance pool, so the next save of it in the same process breaks the foreign key.
+     *
+     * @param list<ProductQuestion> $questions
+     */
+    private function attachCustomers(array $questions): void
+    {
+        $customerIds = array_values(array_unique(array_filter(array_map(
+            static fn (ProductQuestion $question): ?int => $question->getCustomerId(),
+            $questions,
+        ))));
+
+        if ([] === $customerIds) {
+            return;
+        }
+
+        $customers = [];
+
+        foreach (CustomerQuery::create()->filterById($customerIds, Criteria::IN)->find() as $customer) {
+            $customers[(int) $customer->getId()] = $customer;
+        }
+
+        foreach ($questions as $question) {
+            $customer = $customers[(int) $question->getCustomerId()] ?? null;
+
+            if (null !== $customer) {
+                $question->setCustomer($customer);
+            }
+        }
     }
 
     private function publishedForProduct(int $productId, string $locale): ProductQuestionQuery
