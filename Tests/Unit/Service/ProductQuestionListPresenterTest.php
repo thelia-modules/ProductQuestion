@@ -20,6 +20,7 @@ use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Service\BackOffice\ProductQuestionListFilters;
 use ProductQuestion\Service\BackOffice\ProductQuestionListPresenter;
 use ProductQuestion\Service\BackOffice\ProductQuestionStatusCatalog;
+use ProductQuestion\Tests\Double\CustomerStandIn;
 use ProductQuestion\Tests\Double\FixedTranslator;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionAnswerStorage;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionStorage;
@@ -43,26 +44,7 @@ final class ProductQuestionListPresenterTest extends TestCase
 
     private function customer(?string $first, ?string $last, string $email = 'ada@example.com'): object
     {
-        return new class($first, $last, $email) {
-            public function __construct(private ?string $first, private ?string $last, private string $email)
-            {
-            }
-
-            public function getFirstname(): ?string
-            {
-                return $this->first;
-            }
-
-            public function getLastname(): ?string
-            {
-                return $this->last;
-            }
-
-            public function getEmail(): string
-            {
-                return $this->email;
-            }
-        };
+        return CustomerStandIn::make($first, $last, $email);
     }
 
     private function presenter(InMemoryProductQuestionStorage $storage, InMemoryProductTitles $titles, ?InMemoryProductQuestionAnswerStorage $answers = null): ProductQuestionListPresenter
