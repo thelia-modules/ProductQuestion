@@ -25,10 +25,12 @@ use ProductQuestion\Repository\ProductVisibilityInterface;
 use ProductQuestion\Repository\ProductVisibilityRepository;
 use ProductQuestion\Service\Front\CurrentCustomerInterface;
 use ProductQuestion\Service\Front\SecurityContextCurrentCustomer;
+use ProductQuestion\Service\ModuleConfigProductQuestionSettings;
 use ProductQuestion\Service\Notification\CustomerMailerInterface;
 use ProductQuestion\Service\Notification\ShopContextInterface;
 use ProductQuestion\Service\Notification\TheliaCustomerMailer;
 use ProductQuestion\Service\Notification\TheliaShopContext;
+use ProductQuestion\Service\ProductQuestionSettingsInterface;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
@@ -133,7 +135,8 @@ final class ProductQuestion extends BaseModule
     }
 
     /**
-     * The budgets ProductQuestionAskLimiter spends on every question a customer asks.
+     * The budgets ProductQuestionAskLimiter and ProductQuestionAnswerLimiter spend on every
+     * question and every answer a customer writes.
      *
      * Declared here rather than in the shop's framework configuration so that activating the
      * module is enough. Sliding windows: a customer who hit the limit gets it back gradually
@@ -155,6 +158,17 @@ final class ProductQuestion extends BaseModule
                 ],
                 // Registration is open: the accounts of one address share this one.
                 'product_question_ask_per_ip' => [
+                    'policy' => 'sliding_window',
+                    'limit' => 20,
+                    'interval' => '1 hour',
+                ],
+                // Spent by ProductQuestionAnswerLimiter on every answer a customer writes.
+                'product_question_answer_per_customer' => [
+                    'policy' => 'sliding_window',
+                    'limit' => 10,
+                    'interval' => '1 hour',
+                ],
+                'product_question_answer_per_ip' => [
                     'policy' => 'sliding_window',
                     'limit' => 20,
                     'interval' => '1 hour',
@@ -189,6 +203,7 @@ final class ProductQuestion extends BaseModule
         $servicesConfigurator->alias(CurrentCustomerInterface::class, SecurityContextCurrentCustomer::class);
         $servicesConfigurator->alias(ShopContextInterface::class, TheliaShopContext::class);
         $servicesConfigurator->alias(CustomerMailerInterface::class, TheliaCustomerMailer::class);
+        $servicesConfigurator->alias(ProductQuestionSettingsInterface::class, ModuleConfigProductQuestionSettings::class);
     }
 
     private static function tableExists(ConnectionInterface $con, string $table): bool

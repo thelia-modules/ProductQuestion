@@ -16,6 +16,7 @@ namespace ProductQuestion\Controller\Back;
 use ProductQuestion\Exception\InvalidProductQuestionException;
 use ProductQuestion\Form\ProductQuestionAnswerForm;
 use ProductQuestion\Model\ProductQuestion;
+use ProductQuestion\Model\ProductQuestionAnswer;
 use ProductQuestion\ProductQuestion as ProductQuestionModule;
 use ProductQuestion\Repository\ProductQuestionAnswerStorageInterface;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
@@ -23,7 +24,10 @@ use ProductQuestion\Service\BackOffice\ProductQuestionEditPresenter;
 use ProductQuestion\Service\BackOffice\ProductQuestionListFilters;
 use ProductQuestion\Service\BackOffice\ProductQuestionListPresenter;
 use ProductQuestion\Service\ProductQuestionAnswerer;
+use ProductQuestion\Service\ProductQuestionAnswerModerator;
+use ProductQuestion\Service\ProductQuestionPublisher;
 use ProductQuestion\Service\ProductQuestionRefuser;
+use ProductQuestion\Service\ProductQuestionSettingsInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -53,6 +57,9 @@ class ProductQuestionController extends BaseAdminController
         private readonly ProductQuestionAnswerer $answerer,
         private readonly ProductQuestionRefuser $refuser,
         private readonly ProductQuestionAnswerStorageInterface $answers,
+        private readonly ProductQuestionPublisher $publisher,
+        private readonly ProductQuestionAnswerModerator $answerModerator,
+        private readonly ProductQuestionSettingsInterface $settings,
     ) {
     }
 
@@ -65,10 +72,11 @@ class ProductQuestionController extends BaseAdminController
 
         $filters = ProductQuestionListFilters::fromRequest($request);
 
-        return $this->render(
-            'product-questions',
-            $this->listPresenter->present($filters, $request->getLocale())
-        );
+        return $this->render('product-questions', [
+            ...$this->listPresenter->present($filters, $request->getLocale()),
+            'allowsCustomerAnswers' => $this->settings->allowsCustomerAnswers(),
+            'csrfToken' => $this->tokenProvider->assignToken(),
+        ]);
     }
 
     #[Route('/ProductQuestion/{id}', name: '_edit', requirements: ['id' => '\d+'], methods: ['GET'])]
@@ -138,6 +146,68 @@ class ProductQuestionController extends BaseAdminController
         }
 
         return $this->backToQuestion($id);
+    }
+
+    #[Route('/ProductQuestion/{id}/publish', name: '_publish', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function publishAction(Request $request, int $id): Response
+    {
+        if (null !== $denied = $this->checkModuleAccess(AccessManager::UPDATE)) {
+            return $denied;
+        }
+
+        if (null !== $denied = $this->checkToken($request)) {
+            return $denied;
+        }
+
+        $question = $this->storage->findById($id);
+
+        if (null !== $question) {
+            $this->publisher->publish($question);
+        }
+
+        return $this->backToQuestion($id);
+    }
+
+    #[Route('/ProductQuestion/answer/{answerId}/{decision}', name: '_moderate_answer', requirements: ['answerId' => '\d+', 'decision' => 'publish|refuse|delete'], methods: ['POST'])]
+    public function moderateAnswerAction(Request $request, int $answerId, string $decision): Response
+    {
+        if (null !== $denied = $this->checkModuleAccess('delete' === $decision ? AccessManager::DELETE : AccessManager::UPDATE)) {
+            return $denied;
+        }
+
+        if (null !== $denied = $this->checkToken($request)) {
+            return $denied;
+        }
+
+        $answer = $this->answers->findById($answerId);
+
+        if (!$answer instanceof ProductQuestionAnswer) {
+            return $this->backToList();
+        }
+
+        match ($decision) {
+            'publish' => $this->answerModerator->publish($answer),
+            'refuse' => $this->answerModerator->refuse($answer),
+            default => $this->answerModerator->delete($answer),
+        };
+
+        return $this->backToQuestion((int) $answer->getQuestionId());
+    }
+
+    #[Route('/ProductQuestion/settings', name: '_settings', methods: ['POST'])]
+    public function settingsAction(Request $request): Response
+    {
+        if (null !== $denied = $this->checkModuleAccess(AccessManager::UPDATE)) {
+            return $denied;
+        }
+
+        if (null !== $denied = $this->checkToken($request)) {
+            return $denied;
+        }
+
+        $this->settings->setAllowsCustomerAnswers('1' === $request->request->get('allow_customer_answers'));
+
+        return $this->backToList();
     }
 
     #[Route('/ProductQuestion/{id}/refuse', name: '_refuse', requirements: ['id' => '\d+'], methods: ['POST'])]

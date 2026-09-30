@@ -25,4 +25,12 @@ return [
     'No answer yet.' => 'No answer yet.',
     'No question has been published about this product yet.' => 'No question has been published about this product yet.',
     'Thank you! Your question has been sent to the shop and will appear here once published.' => 'Thank you! Your question has been sent to the shop and will appear here once published.',
+    'Answer this question' => 'Answer this question',
+    'Your answer' => 'Your answer',
+    'Send my answer' => 'Send my answer',
+    'Cancel' => 'Cancel',
+    'Sign in to answer this question.' => 'Sign in to answer this question.',
+    'Your answer could not be sent. Please check it and try again.' => 'Your answer could not be sent. Please check it and try again.',
+    'Too many answers have been sent. Please try again later.' => 'Too many answers have been sent. Please try again later.',
+    'Thank you! Your answer has been sent to the shop and will appear here once published.' => 'Thank you! Your answer has been sent to the shop and will appear here once published.',
 ];

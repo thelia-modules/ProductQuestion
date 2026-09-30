@@ -73,6 +73,22 @@
   margin: 0;
 }
 
+.ProductQuestion-answerOpen {
+  align-self: flex-start;
+}
+
+.ProductQuestion-answerForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ProductQuestion-answerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .ProductQuestion-answerLabel time::before {
   content: "\00b7";
   margin: 0 0.35rem;

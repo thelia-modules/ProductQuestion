@@ -1,0 +1,15 @@
+{% set domain = 'productquestion.bo.default-twig' %}
+
+{# The shop's choices about the block. One form, one POST: the settings the next versions add
+   go here as further fields. #}
+<form method="POST" action="{{ path('productquestion_module_settings') }}" class="card card-body mb-3" data-testid="product-question-settings">
+    <input type="hidden" name="_token" value="{{ csrfToken }}">
+    <div class="form-check form-switch mb-2">
+        <input class="form-check-input" type="checkbox" role="switch" id="pq-allow-customer-answers" name="allow_customer_answers" value="1" {{ allowsCustomerAnswers ? 'checked' : '' }}>
+        <label class="form-check-label" for="pq-allow-customer-answers">{{ 'Let customers answer the published questions'|trans({}, domain) }}</label>
+    </div>
+    <p class="text-muted small mb-2">{{ 'Their answers wait for your approval before they appear on the product page.'|trans({}, domain) }}</p>
+    <div>
+        <button type="submit" class="btn btn-sm btn-primary" data-testid="product-question-settings-save">{{ 'Save the settings'|trans({}, domain) }}</button>
+    </div>
+</form>
