@@ -14,6 +14,9 @@ declare(strict_types=1);
 namespace ProductQuestion;
 
 use ProductQuestion\Install\ProductQuestionMessageInstaller;
+use ProductQuestion\Install\ProductQuestionSchemaUpgrader;
+use ProductQuestion\Repository\ProductQuestionAnswerRepository;
+use ProductQuestion\Repository\ProductQuestionAnswerStorageInterface;
 use ProductQuestion\Repository\ProductQuestionRepository;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
 use ProductQuestion\Repository\ProductTitleRepository;
@@ -88,6 +91,10 @@ final class ProductQuestion extends BaseModule
         // then replay the DROP on every question.
         if (!self::tableExists($con, 'product_question')) {
             (new Database($con))->insertSql(null, [__DIR__.DS.'Config'.DS.'TheliaMain.sql']);
+        } else {
+            // A table kept from an earlier version, by a deletion that kept the data or by files
+            // replaced without a refresh: brought to the current schema, its rows kept.
+            (new ProductQuestionSchemaUpgrader($con))->upgrade();
         }
 
         // Outside the guard: idempotent, and a shop that activated a version without the mail
@@ -103,6 +110,9 @@ final class ProductQuestion extends BaseModule
 
         $con ??= Propel::getConnection();
 
+        // Children first: the foreign keys would refuse the parent while they are there.
+        $con->exec('DROP TABLE IF EXISTS `product_question_answer_vote`');
+        $con->exec('DROP TABLE IF EXISTS `product_question_answer`');
         $con->exec('DROP TABLE IF EXISTS `product_question`');
 
         // message_i18n and message_version follow by cascade.
@@ -113,6 +123,12 @@ final class ProductQuestion extends BaseModule
 
     public function update($currentVersion, $newVersion, ?ConnectionInterface $con = null): void
     {
+        // Answers left the question row in 1.3.0. The upgrader checks the database before each
+        // step, so running it on a shop that is already there changes nothing.
+        if (version_compare((string) $currentVersion, '1.3.0', '<')) {
+            (new ProductQuestionSchemaUpgrader($con ?? Propel::getConnection()))->upgrade();
+        }
+
         (new ProductQuestionMessageInstaller())->install();
     }
 
@@ -167,6 +183,7 @@ final class ProductQuestion extends BaseModule
         // load() registers a service under its class name, so autowiring the contract the
         // services depend on needs an alias of its own.
         $servicesConfigurator->alias(ProductQuestionStorageInterface::class, ProductQuestionRepository::class);
+        $servicesConfigurator->alias(ProductQuestionAnswerStorageInterface::class, ProductQuestionAnswerRepository::class);
         $servicesConfigurator->alias(ProductTitleSourceInterface::class, ProductTitleRepository::class);
         $servicesConfigurator->alias(ProductVisibilityInterface::class, ProductVisibilityRepository::class);
         $servicesConfigurator->alias(CurrentCustomerInterface::class, SecurityContextCurrentCustomer::class);

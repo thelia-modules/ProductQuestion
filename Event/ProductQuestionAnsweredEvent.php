@@ -14,18 +14,21 @@ declare(strict_types=1);
 namespace ProductQuestion\Event;
 
 use ProductQuestion\Model\ProductQuestion;
+use ProductQuestion\Model\ProductQuestionAnswer;
 
 /**
- * The shop has written or rewritten its answer.
+ * An answer to the question has just been published: the shop's own, written or rewritten, or
+ * a customer's accepted by a moderator.
  *
- * `firstAnswer` tells the two apart: the customer is told once, when their question goes on
- * the page, not every time a moderator fixes a typo.
+ * `firstAnswer` tells a first publication from a later one: the author of the question is told
+ * once per answer, when it goes on the page, not every time a moderator fixes a typo.
  */
 final class ProductQuestionAnsweredEvent extends ProductQuestionEvent
 {
     public function __construct(
         ProductQuestion $question,
         private readonly bool $firstAnswer = true,
+        private readonly ?ProductQuestionAnswer $answer = null,
     ) {
         parent::__construct($question);
     }
@@ -33,5 +36,11 @@ final class ProductQuestionAnsweredEvent extends ProductQuestionEvent
     public function isFirstAnswer(): bool
     {
         return $this->firstAnswer;
+    }
+
+    /** Null only for a listener dispatching the event the 1.2.0 way, with no answer row. */
+    public function getAnswer(): ?ProductQuestionAnswer
+    {
+        return $this->answer;
     }
 }

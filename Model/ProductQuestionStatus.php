@@ -14,22 +14,28 @@ declare(strict_types=1);
 namespace ProductQuestion\Model;
 
 /**
- * The three states a question goes through.
+ * The three states a question, and each of its answers, goes through.
  *
- * Stored as the TINYINT `product_question.status`, so the integers are part of the data and
- * never change: a shop upgrading the module keeps the rows it already has. A state a shop
- * administrator would create does not exist here, which is why this is an enum and not a
- * `product_question_status` table.
+ * Stored as the TINYINT `status` of product_question and product_question_answer, so the
+ * integers are part of the data and never change: a shop upgrading the module keeps the rows
+ * it already has. A state a shop administrator would create does not exist here, which is why
+ * this is an enum and not a status table.
  */
 enum ProductQuestionStatus: int
 {
-    /** Asked by a customer, waiting for the shop. Not on the product page. */
+    /** Written by a customer, waiting for the shop. Not on the product page. */
     case Pending = 0;
 
-    /** Answered by an administrator. This is the only state the product page shows. */
-    case Answered = 1;
+    /** Accepted by the shop. This is the only state the product page shows. */
+    case Published = 1;
 
     /** Turned down by an administrator. Not on the product page, and kept as the trace of
      *  that decision. */
     case Refused = 2;
+
+    /**
+     * The name of the published state up to 1.2.0, when a question was published by answering
+     * it and by nothing else. Kept so that code written against that version still compiles.
+     */
+    public const Answered = self::Published;
 }

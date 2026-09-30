@@ -20,12 +20,15 @@ use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Service\Front\ProductQuestionTextSanitizer;
 use ProductQuestion\Service\ProductQuestionAnswerer;
+use ProductQuestion\Tests\Double\InMemoryProductQuestionAnswerStorage;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionStorage;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
 final class ProductQuestionAnswererTest extends TestCase
 {
     private InMemoryProductQuestionStorage $storage;
+
+    private InMemoryProductQuestionAnswerStorage $answers;
 
     private EventDispatcher $dispatcher;
 
@@ -34,9 +37,11 @@ final class ProductQuestionAnswererTest extends TestCase
     protected function setUp(): void
     {
         $this->storage = new InMemoryProductQuestionStorage();
+        $this->answers = new InMemoryProductQuestionAnswerStorage();
         $this->dispatcher = new EventDispatcher();
         $this->answerer = new ProductQuestionAnswerer(
             $this->storage,
+            $this->answers,
             new ProductQuestionTextSanitizer(),
             $this->dispatcher,
         );
@@ -51,51 +56,81 @@ final class ProductQuestionAnswererTest extends TestCase
             ->setLocale('fr_FR')
             ->setContent('Est-ce compatible ?')
             ->setStatusEnum(ProductQuestionStatus::Pending);
+        $this->storage->save($question);
+        $this->storage->saved = [];
 
         return $question;
     }
 
+    private function official(ProductQuestion $question): ?\ProductQuestion\Model\ProductQuestionAnswer
+    {
+        return $this->answers->findOfficialForQuestion((int) $question->getId());
+    }
+
     /**
-     * Answering is what puts a question on the product page, so the four columns that say so
-     * move together. A status written without the answer, or an answer without the status,
-     * is a question shown with nothing under it or one hidden with everything.
+     * The shop's answer is an answer row of its own, official, published as it is written, and
+     * writing it publishes the question: a question hidden under a published answer, or an
+     * answer without its date, would be a page that lies.
      */
-    public function testAnsweringWritesTheAnswerItsDateItsAuthorAndTheStatusTogether(): void
+    public function testAnsweringWritesThePublishedOfficialAnswerAndPublishesTheQuestion(): void
     {
         $question = $this->pendingQuestion();
 
-        $this->answerer->answer($question, 'Oui, il est compatible.', 7);
+        $answer = $this->answerer->answer($question, 'Oui, il est compatible.', 7);
 
-        self::assertSame('Oui, il est compatible.', $question->getAnswer());
-        self::assertSame(7, $question->getAnsweredBy());
-        self::assertInstanceOf(\DateTimeInterface::class, $question->getAnsweredAt());
-        self::assertSame(ProductQuestionStatus::Answered, $question->getStatusEnum());
+        self::assertSame($answer, $this->official($question));
+        self::assertSame('Oui, il est compatible.', $answer->getContent());
+        self::assertTrue($answer->isOfficialAnswer());
+        self::assertSame(7, $answer->getAdminId());
+        self::assertNull($answer->getCustomerId());
+        self::assertSame($question->getId(), $answer->getQuestionId());
+        self::assertInstanceOf(\DateTimeInterface::class, $answer->getPublishedAt());
+        self::assertSame(ProductQuestionStatus::Published, $answer->getStatusEnum());
+        self::assertSame(ProductQuestionStatus::Published, $question->getStatusEnum());
         self::assertCount(1, $this->storage->saved);
+        self::assertSame([(int) $question->getId()], $this->answers->refreshedQuestions);
+    }
+
+    /**
+     * One official answer per question: writing it again rewrites it, and keeps the date it was
+     * first published.
+     */
+    public function testAnsweringAgainRewritesTheSameOfficialAnswer(): void
+    {
+        $question = $this->pendingQuestion();
+        $first = $this->answerer->answer($question, 'Premiere reponse.', 7);
+        $publishedAt = $first->getPublishedAt();
+
+        $second = $this->answerer->answer($question, 'Reponse corrigee.', 9);
+
+        self::assertSame($first, $second);
+        self::assertCount(1, $this->answers->findForQuestion((int) $question->getId()));
+        self::assertSame($publishedAt, $second->getPublishedAt());
     }
 
     public function testTheStoredAnswerIsTheCleanedText(): void
     {
         $question = $this->pendingQuestion();
 
-        $this->answerer->answer($question, '  Oui, <b>compatible</b>.  ', 7);
+        $answer = $this->answerer->answer($question, '  Oui, <b>compatible</b>.  ', 7);
 
-        self::assertSame('Oui, compatible.', $question->getAnswer());
+        self::assertSame('Oui, compatible.', $answer->getContent());
     }
 
-    public function testTheAnsweredEventCarriesTheQuestion(): void
+    public function testTheAnsweredEventCarriesTheQuestionAndTheAnswer(): void
     {
         $seen = [];
         $this->dispatcher->addListener(
             ProductQuestionAnsweredEvent::class,
             static function (ProductQuestionAnsweredEvent $event) use (&$seen): void {
-                $seen[] = $event->getQuestion();
+                $seen[] = [$event->getQuestion(), $event->getAnswer()];
             }
         );
 
         $question = $this->pendingQuestion();
-        $this->answerer->answer($question, 'Oui, compatible.', 7);
+        $answer = $this->answerer->answer($question, 'Oui, compatible.', 7);
 
-        self::assertSame([$question], $seen);
+        self::assertSame([[$question, $answer]], $seen);
     }
 
     /**
@@ -120,7 +155,7 @@ final class ProductQuestionAnswererTest extends TestCase
     }
 
     /**
-     * A refusal keeps the answer. A question published, refused, then published again has
+     * A refusal keeps the answer. A question published, refused, then answered again has
      * already been announced to its customer: the second publication is an edit, not a first
      * answer, whatever the status said in between.
      */
@@ -179,8 +214,9 @@ final class ProductQuestionAnswererTest extends TestCase
         }
 
         self::assertSame(ProductQuestionStatus::Pending, $question->getStatusEnum());
-        self::assertNull($question->getAnswer());
+        self::assertNull($this->official($question));
         self::assertSame([], $this->storage->saved);
+        self::assertSame([], $this->answers->saved);
     }
 
     public function testAnAnswerThatCleansDownToNothingIsRefused(): void
@@ -210,10 +246,10 @@ final class ProductQuestionAnswererTest extends TestCase
     {
         $question = $this->pendingQuestion();
 
-        $this->answerer->answer($question, 'Oui, compatible.', 0);
+        $answer = $this->answerer->answer($question, 'Oui, compatible.', 0);
 
-        self::assertNull($question->getAnsweredBy());
-        self::assertSame(ProductQuestionStatus::Answered, $question->getStatusEnum());
+        self::assertNull($answer->getAdminId());
+        self::assertSame(ProductQuestionStatus::Published, $question->getStatusEnum());
     }
 
     /**
@@ -224,10 +260,10 @@ final class ProductQuestionAnswererTest extends TestCase
         $question = $this->pendingQuestion();
         $this->answerer->answer($question, 'Premiere reponse.', 7);
 
-        $this->answerer->answer($question, 'Reponse corrigee.', 9);
+        $answer = $this->answerer->answer($question, 'Reponse corrigee.', 9);
 
-        self::assertSame('Reponse corrigee.', $question->getAnswer());
-        self::assertSame(9, $question->getAnsweredBy());
-        self::assertSame(ProductQuestionStatus::Answered, $question->getStatusEnum());
+        self::assertSame('Reponse corrigee.', $answer->getContent());
+        self::assertSame(9, $answer->getAdminId());
+        self::assertSame(ProductQuestionStatus::Published, $question->getStatusEnum());
     }
 }

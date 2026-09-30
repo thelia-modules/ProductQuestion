@@ -58,10 +58,11 @@ final readonly class ProductQuestionCustomerNotifier implements EventSubscriberI
         }
 
         $question = $event->getQuestion();
+        $answer = $event->getAnswer();
         $questionId = (int) $question->getId();
         $customerId = $question->getCustomerId();
 
-        if ($questionId <= 0 || null === $customerId || $customerId <= 0) {
+        if (null === $answer || $questionId <= 0 || null === $customerId || $customerId <= 0) {
             return;
         }
 
@@ -76,7 +77,7 @@ final readonly class ProductQuestionCustomerNotifier implements EventSubscriberI
                 $this->notification->parameters(
                     $questionId,
                     (string) $question->getContent(),
-                    (string) $question->getAnswer(),
+                    (string) $answer->getContent(),
                     $this->productTitles->titleFor($productId, $locale),
                     $this->shop->productUrl($productId, $locale),
                     $locale,

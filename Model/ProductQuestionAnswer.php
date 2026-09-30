@@ -13,15 +13,16 @@ declare(strict_types=1);
 
 namespace ProductQuestion\Model;
 
-use ProductQuestion\Model\Base\ProductQuestion as BaseProductQuestion;
+use ProductQuestion\Model\Base\ProductQuestionAnswer as BaseProductQuestionAnswer;
 
-class ProductQuestion extends BaseProductQuestion
+/**
+ * One answer to a question: the shop's own, flagged official, or one a customer wrote.
+ *
+ * An answer goes through the same three states as a question. The shop's answer is published
+ * as it is written; a customer's waits for a moderator.
+ */
+class ProductQuestionAnswer extends BaseProductQuestionAnswer
 {
-    /**
-     * The stored status as the enum, or null when the column holds a value no version of
-     * this module ever wrote. Callers decide what to do with that; nothing here pretends
-     * an unknown row is pending.
-     */
     public function getStatusEnum(): ?ProductQuestionStatus
     {
         $status = $this->getStatus();
@@ -29,10 +30,6 @@ class ProductQuestion extends BaseProductQuestion
         return null === $status ? null : ProductQuestionStatus::tryFrom($status);
     }
 
-    /**
-     * The generated setter takes the TINYINT as ?int and rejects anything else under
-     * strict_types. Going through the enum is what keeps that cast in one place.
-     */
     public function setStatusEnum(ProductQuestionStatus $status): static
     {
         return $this->setStatus($status->value);
@@ -43,12 +40,8 @@ class ProductQuestion extends BaseProductQuestion
         return ProductQuestionStatus::Published === $this->getStatusEnum();
     }
 
-    /**
-     * @deprecated since 1.3.0, a question is published on its own and may have no answer yet:
-     *             use isPublished()
-     */
-    public function isAnswered(): bool
+    public function isOfficialAnswer(): bool
     {
-        return $this->isPublished();
+        return true === $this->getIsOfficial();
     }
 }

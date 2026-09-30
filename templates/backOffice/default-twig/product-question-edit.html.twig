@@ -36,8 +36,13 @@
                     </div>
                 </div>
 
-                <div class="card">
-                    <div class="card-header">{{ 'Answer'|trans({}, domain) }}</div>
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>{{ 'Answer from the shop'|trans({}, domain) }}</span>
+                        {% if officialAnswer %}
+                            <span class="text-muted small" data-testid="product-question-official-helpful">{{ 'Found helpful by %count% customer(s)'|trans({'%count%': officialAnswer.helpfulCount}, domain) }}</span>
+                        {% endif %}
+                    </div>
                     <div class="card-body">
                         {# The theme's form theme, as its own edit screens apply it: without it the
                            row renders with Twig's bare layout, label beside a narrow textarea. #}
@@ -45,7 +50,7 @@
                         {{ form_start(form, {action: path('productquestion_module_answer', {id: question.id}), method: 'POST', attr: {'data-testid': 'product-question-answer-form'}}) }}
                             {{ form_row(form.answer) }}
                             <button type="submit" class="btn btn-primary" data-testid="product-question-publish">
-                                {{ question.answer ? 'Update the answer'|trans({}, domain) : 'Publish the answer'|trans({}, domain) }}
+                                {{ officialAnswer ? 'Update the answer'|trans({}, domain) : 'Publish the answer'|trans({}, domain) }}
                             </button>
                         {{ form_end(form) }}
 
@@ -72,10 +77,10 @@
                             <span class="text-muted d-block">{{ 'Product'|trans({}, domain) }}</span>
                             <a href="{{ productUrl }}" data-testid="product-question-product-link">{{ productTitle ?? ('Product #%id%'|trans({'%id%': question.productId}, domain)) }}</a>
                         </li>
-                        {% if question.answeredAt %}
+                        {% if officialAnswer and officialAnswer.publishedAt %}
                             <li class="list-group-item">
                                 <span class="text-muted d-block">{{ 'Answered on'|trans({}, domain) }}</span>
-                                {{ question.answeredAt|date('d/m/Y H:i') }}
+                                {{ officialAnswer.publishedAt|date('d/m/Y H:i') }}
                             </li>
                         {% endif %}
                     </ul>

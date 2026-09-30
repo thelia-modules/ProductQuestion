@@ -15,17 +15,21 @@ namespace ProductQuestion\Service\Api;
 
 use ProductQuestion\Api\Resource\ProductQuestion as ProductQuestionResource;
 use ProductQuestion\Model\ProductQuestion;
+use ProductQuestion\Model\ProductQuestionAnswer;
 
 /**
  * A stored question, as the front API hands it over.
  *
- * The row carries more than a visitor may see: who asked, who answered, the moderation
- * status. The resource is built field by field rather than mapped column by column, so a
- * column added to the table later cannot turn up in a public payload by itself.
+ * The rows carry more than a visitor may see: who asked, who answered, the moderation status.
+ * The resource is built field by field rather than mapped column by column, so a column added
+ * to a table later cannot turn up in a public payload by itself.
  */
 final readonly class ProductQuestionPayloadMapper
 {
-    public function toResource(ProductQuestion $question): ProductQuestionResource
+    /**
+     * @param list<ProductQuestionAnswer> $publishedAnswers the question's published answers, in display order
+     */
+    public function toResource(ProductQuestion $question, array $publishedAnswers = []): ProductQuestionResource
     {
         $resource = new ProductQuestionResource();
 
@@ -33,12 +37,32 @@ final readonly class ProductQuestionPayloadMapper
         $resource->productId = $question->getProductId();
         $resource->locale = $question->getLocale();
         $resource->content = $question->getContent();
-        $resource->published = $question->isAnswered();
-        // A pending question has no answer to show, and a refused one keeps whatever was
-        // drafted for the moderator's eyes only.
-        $resource->answer = $resource->published ? $question->getAnswer() : null;
-        $resource->answeredAt = $resource->published ? self::date($question->getAnsweredAt()) : null;
+        $resource->published = $question->isPublished();
         $resource->createdAt = self::date($question->getCreatedAt());
+
+        // A question off the page shows none of its answers, whatever they are.
+        if (!$resource->published) {
+            return $resource;
+        }
+
+        foreach ($publishedAnswers as $answer) {
+            if (!$answer->isPublished()) {
+                continue;
+            }
+
+            $resource->answers[] = [
+                'id' => (int) $answer->getId(),
+                'content' => (string) $answer->getContent(),
+                'official' => $answer->isOfficialAnswer(),
+                'helpfulCount' => (int) $answer->getHelpfulCount(),
+                'publishedAt' => self::date($answer->getPublishedAt()),
+            ];
+
+            if (null === $resource->answer && $answer->isOfficialAnswer()) {
+                $resource->answer = $answer->getContent();
+                $resource->answeredAt = self::date($answer->getPublishedAt());
+            }
+        }
 
         return $resource;
     }

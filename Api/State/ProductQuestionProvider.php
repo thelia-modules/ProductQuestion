@@ -19,6 +19,7 @@ use ApiPlatform\State\Pagination\TraversablePaginator;
 use ApiPlatform\State\ProviderInterface;
 use ProductQuestion\Api\Resource\ProductQuestion as ProductQuestionResource;
 use ProductQuestion\Model\ProductQuestion;
+use ProductQuestion\Repository\ProductQuestionAnswerStorageInterface;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
 use ProductQuestion\Repository\ProductVisibilityInterface;
 use ProductQuestion\Service\Api\ProductQuestionPayloadMapper;
@@ -26,7 +27,8 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 /**
- * Serves the answered questions of one product, and one question by its id.
+ * Serves the published questions of one product with their published answers, and one
+ * question by its id. The answers of a whole page come in one query.
  *
  * The status filter is applied here rather than left to a query parameter: a collection a
  * client can widen is a collection that hands out what a moderator has not read yet. Same
@@ -48,6 +50,7 @@ final readonly class ProductQuestionProvider implements ProviderInterface
         private ProductQuestionPayloadMapper $mapper,
         private RequestStack $requestStack,
         private ProductVisibilityInterface $products,
+        private ProductQuestionAnswerStorageInterface $answers,
     ) {
     }
 
@@ -61,11 +64,13 @@ final readonly class ProductQuestionProvider implements ProviderInterface
 
         // Null is a 404: a question waiting for the shop, or one it refused, is not readable
         // by the visitor who happens to know its id. Nor is one about a product taken offline.
-        if (null === $question || !$question->isAnswered() || !$this->products->isVisible((int) $question->getProductId())) {
+        if (null === $question || !$question->isPublished() || !$this->products->isVisible((int) $question->getProductId())) {
             return null;
         }
 
-        return $this->mapper->toResource($question);
+        $questionId = (int) $question->getId();
+
+        return $this->mapper->toResource($question, $this->answers->findPublishedForQuestions([$questionId])[$questionId] ?? []);
     }
 
     /**
@@ -96,11 +101,16 @@ final readonly class ProductQuestionProvider implements ProviderInterface
         // An offline product has no questions to show: the same empty page a product nobody
         // asked about gets, rather than an error that tells the product exists.
         $slice = $this->products->isVisible($productId)
-            ? $this->storage->findAnsweredForProductPage($productId, $locale, ($page - 1) * $itemsPerPage, $itemsPerPage)
+            ? $this->storage->findPublishedForProductPage($productId, $locale, ($page - 1) * $itemsPerPage, $itemsPerPage)
             : ['items' => [], 'total' => 0];
 
+        $answers = $this->answers->findPublishedForQuestions(array_map(
+            static fn (ProductQuestion $question): int => (int) $question->getId(),
+            $slice['items'],
+        ));
+
         $questions = array_map(
-            fn (ProductQuestion $question): ProductQuestionResource => $this->mapper->toResource($question),
+            fn (ProductQuestion $question): ProductQuestionResource => $this->mapper->toResource($question, $answers[(int) $question->getId()] ?? []),
             $slice['items'],
         );
 

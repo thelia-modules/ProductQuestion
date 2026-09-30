@@ -21,8 +21,10 @@ use PHPUnit\Framework\TestCase;
 use ProductQuestion\Api\Resource\ProductQuestion as ProductQuestionResource;
 use ProductQuestion\Api\State\ProductQuestionProvider;
 use ProductQuestion\Model\ProductQuestion;
+use ProductQuestion\Model\ProductQuestionAnswer;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Service\Api\ProductQuestionPayloadMapper;
+use ProductQuestion\Tests\Double\InMemoryProductQuestionAnswerStorage;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionStorage;
 use ProductQuestion\Tests\Double\InMemoryProductVisibility;
 use Symfony\Component\HttpFoundation\Request;
@@ -30,21 +32,24 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 /**
- * What the front API lets a client read: the answered questions of one product, in one
+ * What the front API lets a client read: the published questions of one product, in one
  * language, and nothing a moderator has not published.
  */
 final class ProductQuestionProviderTest extends TestCase
 {
     private InMemoryProductQuestionStorage $storage;
 
+    private InMemoryProductQuestionAnswerStorage $answers;
+
     protected function setUp(): void
     {
+        $this->answers = new InMemoryProductQuestionAnswerStorage();
         $this->storage = new InMemoryProductQuestionStorage([
-            $this->question(1, 12, 'fr_FR', ProductQuestionStatus::Answered, 'Compatible ?', 'Oui.'),
+            $this->question(1, 12, 'fr_FR', ProductQuestionStatus::Published, 'Compatible ?', 'Oui.'),
             $this->question(2, 12, 'fr_FR', ProductQuestionStatus::Pending, 'En attente ?'),
             $this->question(3, 12, 'fr_FR', ProductQuestionStatus::Refused, 'Refusee ?', 'Brouillon'),
-            $this->question(4, 12, 'en_US', ProductQuestionStatus::Answered, 'Compatible?', 'Yes.'),
-            $this->question(5, 99, 'fr_FR', ProductQuestionStatus::Answered, 'Autre ?', 'Oui.'),
+            $this->question(4, 12, 'en_US', ProductQuestionStatus::Published, 'Compatible?', 'Yes.'),
+            $this->question(5, 99, 'fr_FR', ProductQuestionStatus::Published, 'Autre ?', 'Oui.'),
         ]);
     }
 
@@ -57,8 +62,16 @@ final class ProductQuestionProviderTest extends TestCase
             ->setCustomerId(42)
             ->setLocale($locale)
             ->setContent($content)
-            ->setAnswer($answer)
             ->setStatusEnum($status);
+
+        if (null !== $answer) {
+            $this->answers->save((new ProductQuestionAnswer())
+                ->setQuestionId($id)
+                ->setIsOfficial(true)
+                ->setAdminId(7)
+                ->setContent($answer)
+                ->setStatusEnum(ProductQuestionStatus::Published));
+        }
 
         return $question;
     }
@@ -78,6 +91,7 @@ final class ProductQuestionProviderTest extends TestCase
             new ProductQuestionPayloadMapper(),
             $requestStack,
             new InMemoryProductVisibility($visibleProductIds),
+            $this->answers,
         );
     }
 
@@ -98,7 +112,7 @@ final class ProductQuestionProviderTest extends TestCase
         return $items;
     }
 
-    public function testTheListIsTheAnsweredQuestionsOfOneProductInTheLanguageAsked(): void
+    public function testTheListIsThePublishedQuestionsOfOneProductInTheLanguageAsked(): void
     {
         $items = $this->collection(['productId' => 12, 'locale' => 'fr_FR']);
 
@@ -149,7 +163,7 @@ final class ProductQuestionProviderTest extends TestCase
     public function testTheListIsPaginated(): void
     {
         for ($i = 10; $i < 15; ++$i) {
-            $this->storage->save($this->question($i, 12, 'fr_FR', ProductQuestionStatus::Answered, 'Q'.$i, 'R'));
+            $this->storage->save($this->question($i, 12, 'fr_FR', ProductQuestionStatus::Published, 'Q'.$i, 'R'));
         }
 
         $result = $this->provider()->provide(new GetCollection(), [], ['filters' => ['productId' => 12, 'itemsPerPage' => 2, 'page' => 2]]);
@@ -160,10 +174,10 @@ final class ProductQuestionProviderTest extends TestCase
         self::assertCount(2, iterator_to_array($result));
 
         // The page is cut by the query, not after reading every answer of the product.
-        self::assertSame([['offset' => 2, 'limit' => 2]], $this->storage->answeredPageCalls);
+        self::assertSame([['offset' => 2, 'limit' => 2]], $this->storage->publishedPageCalls);
     }
 
-    public function testOneAnsweredQuestionIsReadableByItsId(): void
+    public function testOnePublishedQuestionIsReadableByItsId(): void
     {
         $item = $this->provider()->provide(new Get(), ['id' => 1]);
 
@@ -193,7 +207,7 @@ final class ProductQuestionProviderTest extends TestCase
         self::assertInstanceOf(TraversablePaginator::class, $result);
         self::assertSame([], iterator_to_array($result));
         self::assertSame(0.0, $result->getTotalItems());
-        self::assertSame([], $this->storage->answeredPageCalls);
+        self::assertSame([], $this->storage->publishedPageCalls);
     }
 
     public function testAQuestionOfAnOfflineProductIsNotReadableByItsId(): void

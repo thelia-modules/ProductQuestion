@@ -42,6 +42,8 @@ final readonly class ProductQuestionListFilters
         public int $page = 1,
         public int $limit = self::DEFAULT_LIMIT,
         public string $order = self::DEFAULT_ORDER,
+        // Only the questions with a customer answer waiting for a moderator.
+        public bool $pendingAnswers = false,
     ) {
     }
 
@@ -59,6 +61,7 @@ final readonly class ProductQuestionListFilters
             // is also how one request asks the database for every row it holds.
             limit: min(self::MAXIMUM_LIMIT, max(1, (int) $request->query->get('limit', self::DEFAULT_LIMIT))),
             order: \in_array($order, self::ORDERS, true) ? $order : self::DEFAULT_ORDER,
+            pendingAnswers: 'pending' === $request->query->get('answers'),
         );
     }
 
@@ -96,12 +99,16 @@ final readonly class ProductQuestionListFilters
             $params['limit'] = $this->limit;
         }
 
+        if ($this->pendingAnswers) {
+            $params['answers'] = 'pending';
+        }
+
         return $params;
     }
 
     public function withPage(int $page): self
     {
-        return new self($this->status, $this->productId, $this->customerId, $this->locale, max(1, $page), $this->limit, $this->order);
+        return new self($this->status, $this->productId, $this->customerId, $this->locale, max(1, $page), $this->limit, $this->order, $this->pendingAnswers);
     }
 
     public function withStatus(?int $status): self
@@ -119,7 +126,14 @@ final readonly class ProductQuestionListFilters
             1,
             $this->limit,
             $this->order,
+            'answers' === $key ? false : $this->pendingAnswers,
         );
+    }
+
+    /** The same filters on the questions whose customer answers wait for a moderator. */
+    public function withPendingAnswers(): self
+    {
+        return new self(null, $this->productId, $this->customerId, $this->locale, 1, $this->limit, $this->order, true);
     }
 
     public function hasAnyFilter(): bool
@@ -127,7 +141,8 @@ final readonly class ProductQuestionListFilters
         return null !== $this->status
             || null !== $this->productId
             || null !== $this->customerId
-            || null !== $this->locale;
+            || null !== $this->locale
+            || $this->pendingAnswers;
     }
 
     public function offset(): int

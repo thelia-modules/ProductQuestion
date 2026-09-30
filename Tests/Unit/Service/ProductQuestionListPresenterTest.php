@@ -15,11 +15,13 @@ namespace ProductQuestion\Tests\Unit\Service;
 
 use PHPUnit\Framework\TestCase;
 use ProductQuestion\Model\ProductQuestion;
+use ProductQuestion\Model\ProductQuestionAnswer;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Service\BackOffice\ProductQuestionListFilters;
 use ProductQuestion\Service\BackOffice\ProductQuestionListPresenter;
 use ProductQuestion\Service\BackOffice\ProductQuestionStatusCatalog;
 use ProductQuestion\Tests\Double\FixedTranslator;
+use ProductQuestion\Tests\Double\InMemoryProductQuestionAnswerStorage;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionStorage;
 use ProductQuestion\Tests\Double\InMemoryProductTitles;
 
@@ -63,13 +65,36 @@ final class ProductQuestionListPresenterTest extends TestCase
         };
     }
 
-    private function presenter(InMemoryProductQuestionStorage $storage, InMemoryProductTitles $titles): ProductQuestionListPresenter
+    private function presenter(InMemoryProductQuestionStorage $storage, InMemoryProductTitles $titles, ?InMemoryProductQuestionAnswerStorage $answers = null): ProductQuestionListPresenter
     {
         return new ProductQuestionListPresenter(
             $storage,
             new ProductQuestionStatusCatalog(new FixedTranslator()),
             $titles,
+            $answers ?? new InMemoryProductQuestionAnswerStorage(),
         );
+    }
+
+    /**
+     * Each row says how many customer answers wait for a moderator, and the page how many wait
+     * across the shop: counted, not loaded.
+     */
+    public function testTheAnswersWaitingForAModeratorAreCountedPerRowAndOverall(): void
+    {
+        $storage = new InMemoryProductQuestionStorage([
+            $this->question(12, 'Avec reponses ?'),
+            $this->question(12, 'Sans reponse ?'),
+        ]);
+        $answers = new InMemoryProductQuestionAnswerStorage([
+            (new ProductQuestionAnswer())->setQuestionId(1)->setContent('a')->setStatusEnum(ProductQuestionStatus::Pending),
+            (new ProductQuestionAnswer())->setQuestionId(1)->setContent('b')->setStatusEnum(ProductQuestionStatus::Pending),
+            (new ProductQuestionAnswer())->setQuestionId(1)->setContent('c')->setStatusEnum(ProductQuestionStatus::Published),
+        ]);
+
+        $view = $this->presenter($storage, new InMemoryProductTitles([]), $answers)->present(new ProductQuestionListFilters(), 'fr_FR');
+
+        self::assertSame([2, 0], array_column($view['rows'], 'pendingAnswers'));
+        self::assertSame(2, $view['pendingAnswers']);
     }
 
     public function testEachRowCarriesWhatTheTableShows(): void

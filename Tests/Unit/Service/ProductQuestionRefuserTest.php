@@ -47,27 +47,6 @@ final class ProductQuestionRefuserTest extends TestCase
         self::assertCount(1, $this->storage->saved);
     }
 
-    /**
-     * A refused question is off the product page whatever it holds. What a moderator typed is
-     * the trace of the decision, and they may want it back if they change their mind.
-     */
-    public function testRefusingAnAnsweredQuestionLeavesTheAnswerWhereItIs(): void
-    {
-        $question = new ProductQuestion();
-        $question
-            ->setAnswer('Oui, compatible.')
-            ->setAnsweredBy(7)
-            ->setAnsweredAt(new \DateTimeImmutable('2026-01-15 10:00:00'))
-            ->setStatusEnum(ProductQuestionStatus::Answered);
-
-        $this->refuser->refuse($question);
-
-        self::assertSame(ProductQuestionStatus::Refused, $question->getStatusEnum());
-        self::assertSame('Oui, compatible.', $question->getAnswer());
-        self::assertSame(7, $question->getAnsweredBy());
-        self::assertNotNull($question->getAnsweredAt());
-    }
-
     public function testTheRefusedEventCarriesTheQuestion(): void
     {
         $seen = [];

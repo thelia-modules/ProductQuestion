@@ -35,9 +35,9 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
     /**
      * @return list<ProductQuestion>
      */
-    public function findAnsweredForProduct(int $productId, string $locale): array
+    public function findPublishedForProduct(int $productId, string $locale): array
     {
-        return $this->answeredForProduct($productId, $locale)
+        return $this->publishedForProduct($productId, $locale)
             ->find()
             ->getData();
     }
@@ -45,9 +45,9 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
     /**
      * @return array{items: list<ProductQuestion>, total: int}
      */
-    public function findAnsweredForProductPage(int $productId, string $locale, int $offset, int $limit): array
+    public function findPublishedForProductPage(int $productId, string $locale, int $offset, int $limit): array
     {
-        $query = $this->answeredForProduct($productId, $locale);
+        $query = $this->publishedForProduct($productId, $locale);
 
         // Counted on a copy, as in searchForModeration().
         $total = (clone $query)->count();
@@ -117,6 +117,14 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
             $query->filterByLocale($filters->locale);
         }
 
+        if ($filters->pendingAnswers) {
+            // The questions a customer answered and a moderator has not read yet.
+            $query->where(\sprintf(
+                'EXISTS (SELECT 1 FROM product_question_answer pqa WHERE pqa.question_id = product_question.id AND pqa.status = %d)',
+                ProductQuestionStatus::Pending->value,
+            ));
+        }
+
         // Counted on a copy: count() rewrites the select list of the query it runs on, and
         // this one still has to fetch its rows afterwards.
         $total = (clone $query)->count();
@@ -167,15 +175,16 @@ final readonly class ProductQuestionRepository implements ProductQuestionStorage
         return array_values(array_unique($locales));
     }
 
-    private function answeredForProduct(int $productId, string $locale): ProductQuestionQuery
+    private function publishedForProduct(int $productId, string $locale): ProductQuestionQuery
     {
         return ProductQuestionQuery::create()
             ->filterByProductId($productId)
-            ->filterByStatus(ProductQuestionStatus::Answered->value)
+            ->filterByStatus(ProductQuestionStatus::Published->value)
             ->filterByLocale($locale)
-            // An answer edited later moves up: what the shop last said about the product is
-            // what a visitor reads first.
-            ->orderByAnsweredAt(Criteria::DESC)
+            // The most useful first: the helpful votes of the question's published answers,
+            // summed onto the row. Among equals, the most recent question.
+            ->orderByHelpfulCount(Criteria::DESC)
+            ->orderByCreatedAt(Criteria::DESC)
             ->orderById(Criteria::DESC);
     }
 

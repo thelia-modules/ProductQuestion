@@ -14,17 +14,21 @@ declare(strict_types=1);
 namespace ProductQuestion\Service;
 
 use ProductQuestion\Model\ProductQuestion;
+use ProductQuestion\Model\ProductQuestionAnswer;
+use ProductQuestion\Repository\ProductQuestionAnswerStorageInterface;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
 use Thelia\Domain\Customer\Service\CustomerPersonalDataProviderInterface;
 use Thelia\Model\Customer;
 
 /**
- * The personal data this module holds about a customer: the questions they asked.
+ * The personal data this module holds about a customer: the questions they asked, the answers
+ * they wrote and the answers they found helpful.
  *
- * Picked up by the core's exporter and anonymizer through the interface, so a customer who
- * asks for their data gets their questions with it, and anonymizing an account detaches its
- * questions the way deleting it already does through the schema. The questions themselves
- * stay: a published answer is the shop's content on the product page, only who asked it goes.
+ * Picked up by the core's exporter and anonymizer through the interface, so a customer who asks
+ * for their data gets all three, and anonymizing an account detaches them the way deleting it
+ * already does through the schema. The texts themselves stay: a published question or answer is
+ * content of the product page, only who wrote it goes; a vote keeps counting, nobody can tell
+ * whose it was.
  */
 final readonly class ProductQuestionPersonalDataProvider implements CustomerPersonalDataProviderInterface
 {
@@ -32,6 +36,7 @@ final readonly class ProductQuestionPersonalDataProvider implements CustomerPers
 
     public function __construct(
         private ProductQuestionStorageInterface $storage,
+        private ProductQuestionAnswerStorageInterface $answers,
     ) {
     }
 
@@ -41,33 +46,61 @@ final readonly class ProductQuestionPersonalDataProvider implements CustomerPers
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return array{questions: list<array<string, mixed>>, answers: list<array<string, mixed>>, helpful_votes: list<int>}
      */
     public function exportPersonalData(Customer $customer): array
     {
-        return array_map(
-            static fn (ProductQuestion $question): array => [
-                'id' => $question->getId(),
-                'product_id' => $question->getProductId(),
-                'locale' => $question->getLocale(),
-                'content' => $question->getContent(),
-                // Pending questions are exported too: what the customer wrote is theirs
-                // whether or not the shop has published it.
-                'status' => null === $question->getStatusEnum() ? 'unknown' : strtolower($question->getStatusEnum()->name),
-                'answer' => $question->getAnswer(),
-                'answered_at' => $question->getAnsweredAt()?->format(\DateTimeInterface::ATOM),
-                'created_at' => $question->getCreatedAt()?->format(\DateTimeInterface::ATOM),
-            ],
-            $this->storage->findByCustomer((int) $customer->getId()),
-        );
+        $customerId = (int) $customer->getId();
+
+        return [
+            // Pending ones too: what the customer wrote is theirs whether or not the shop has
+            // published it.
+            'questions' => array_map(
+                static fn (ProductQuestion $question): array => [
+                    'id' => $question->getId(),
+                    'product_id' => $question->getProductId(),
+                    'locale' => $question->getLocale(),
+                    'content' => $question->getContent(),
+                    'status' => self::status($question->getStatusEnum()?->name),
+                    'notify_author' => $question->getNotifyAuthor(),
+                    'created_at' => self::date($question->getCreatedAt()),
+                ],
+                $this->storage->findByCustomer($customerId),
+            ),
+            'answers' => array_map(
+                static fn (ProductQuestionAnswer $answer): array => [
+                    'id' => $answer->getId(),
+                    'question_id' => $answer->getQuestionId(),
+                    'content' => $answer->getContent(),
+                    'status' => self::status($answer->getStatusEnum()?->name),
+                    'created_at' => self::date($answer->getCreatedAt()),
+                ],
+                $this->answers->findByCustomer($customerId),
+            ),
+            'helpful_votes' => $this->answers->findVotedAnswerIdsByCustomer($customerId),
+        ];
     }
 
     public function anonymizePersonalData(Customer $customer): void
     {
-        foreach ($this->storage->findByCustomer((int) $customer->getId()) as $question) {
+        $customerId = (int) $customer->getId();
+
+        foreach ($this->storage->findByCustomer($customerId) as $question) {
             $question->setCustomerId(null);
 
             $this->storage->save($question);
         }
+
+        $this->answers->detachCustomer($customerId);
+    }
+
+    private static function status(?string $name): string
+    {
+        return null === $name ? 'unknown' : strtolower($name);
+    }
+
+    private static function date(mixed $value): ?string
+    {
+        return $value instanceof \DateTimeInterface ? $value->format(\DateTimeInterface::ATOM) : null;
     }
 }

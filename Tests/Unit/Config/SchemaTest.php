@@ -69,7 +69,8 @@ final class SchemaTest extends TestCase
 
         self::assertStringContainsString('REFERENCES `customer` (`id`)', $this->sql);
         self::assertStringContainsString('REFERENCES `admin` (`id`)', $this->sql);
-        self::assertSame(2, substr_count($this->sql, 'ON DELETE SET NULL'));
+        // The question's asker; an answer's customer and administrator; a vote's customer.
+        self::assertSame(4, substr_count($this->sql, 'ON DELETE SET NULL'));
     }
 
     /**
@@ -98,6 +99,52 @@ final class SchemaTest extends TestCase
             $this->schema
         );
         self::assertStringContainsString('INDEX `idx_product_question_status` (`status`)', $this->sql);
+    }
+
+    /**
+     * Deleting a question takes its answers, and deleting an answer takes its votes: nothing
+     * else in the module cleans up after them.
+     */
+    public function testAnswersAndVotesFollowWhatTheyBelongTo(): void
+    {
+        self::assertMatchesRegularExpression('#CONSTRAINT `fk_product_question_answer_question_id`\s*FOREIGN KEY \(`question_id`\)\s*REFERENCES `product_question` \(`id`\)\s*ON UPDATE RESTRICT\s*ON DELETE CASCADE#', $this->sql);
+        self::assertMatchesRegularExpression('#CONSTRAINT `fk_product_question_answer_vote_answer_id`\s*FOREIGN KEY \(`answer_id`\)\s*REFERENCES `product_question_answer` \(`id`\)\s*ON UPDATE RESTRICT\s*ON DELETE CASCADE#', $this->sql);
+    }
+
+    /**
+     * One helpful vote per customer and answer, held by the database.
+     */
+    public function testAVoteIsUniquePerAnswerAndCustomer(): void
+    {
+        self::assertStringContainsString('UNIQUE INDEX `uq_product_question_answer_vote_answer_customer` (`answer_id`, `customer_id`)', $this->sql);
+    }
+
+    /**
+     * The answers of a page of questions are read by question and status in one query.
+     */
+    public function testTheAnswersOfAPageAreIndexed(): void
+    {
+        self::assertStringContainsString('INDEX `idx_product_question_answer_question_status` (`question_id`, `status`)', $this->sql);
+        self::assertStringContainsString('INDEX `idx_product_question_answer_status` (`status`)', $this->sql);
+    }
+
+    /**
+     * The upgrader creates the tables with the same definition as a fresh install: the two must
+     * not drift apart.
+     */
+    public function testTheUpgraderCreatesTheTablesAsAFreshInstallDoes(): void
+    {
+        $upgrader = (string) file_get_contents(\dirname(__DIR__, 3).'/Install/ProductQuestionSchemaUpgrader.php');
+
+        foreach (['product_question_answer', 'product_question_answer_vote'] as $table) {
+            self::assertSame(1, preg_match('#CREATE TABLE `'.$table.'`\s*\((.*?)\) ENGINE=InnoDB;#s', $this->sql, $fresh));
+            self::assertSame(1, preg_match('#CREATE TABLE `'.$table.'`\s*\((.*?)\) ENGINE=InnoDB\n#s', $upgrader, $upgrade));
+            self::assertSame(
+                preg_replace('#\s+#', ' ', trim($fresh[1])),
+                preg_replace('#\s+#', ' ', trim($upgrade[1])),
+                $table.' differs between TheliaMain.sql and the upgrader',
+            );
+        }
     }
 
     /**

@@ -13,7 +13,6 @@ declare(strict_types=1);
 
 return [
     'Pending' => 'En attente',
-    'Answered' => 'Répondue',
     'Refused' => 'Refusée',
     'Unknown' => 'Inconnu',
 
@@ -58,4 +57,7 @@ return [
     'Refuse the question' => 'Refuser la question',
     'Delete' => 'Supprimer',
     'Answering a question' => 'Réponse à une question',
+    'Published' => 'Publiée',
+    'Answer from the shop' => 'Réponse de la boutique',
+    'Found helpful by %count% customer(s)' => 'Utile pour %count% client(s)',
 ];
