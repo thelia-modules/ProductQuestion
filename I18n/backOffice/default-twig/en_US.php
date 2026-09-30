@@ -81,4 +81,13 @@ return [
     'Save' => 'Save',
 
     'waiting for moderation' => 'waiting for moderation',
+
+    'Select every question of this page' => 'Select every question of this page',
+    'Select this question' => 'Select this question',
+    'selected' => 'selected',
+    'Publish the selection' => 'Publish the selection',
+    'Refuse the selection' => 'Refuse the selection',
+    'Delete the selection' => 'Delete the selection',
+    'Delete the selected questions and their answers? This cannot be undone.' => 'Delete the selected questions and their answers? This cannot be undone.',
+    '%count% question(s) processed.' => '%count% question(s) processed.',
 ];

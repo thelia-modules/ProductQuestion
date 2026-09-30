@@ -81,4 +81,13 @@ return [
     'Save' => 'Enregistrer',
 
     'waiting for moderation' => 'en attente de modération',
+
+    'Select every question of this page' => 'Sélectionner toutes les questions de cette page',
+    'Select this question' => 'Sélectionner cette question',
+    'selected' => 'sélectionnée(s)',
+    'Publish the selection' => 'Publier la sélection',
+    'Refuse the selection' => 'Refuser la sélection',
+    'Delete the selection' => 'Supprimer la sélection',
+    'Delete the selected questions and their answers? This cannot be undone.' => 'Supprimer les questions sélectionnées et leurs réponses ? Cette action est définitive.',
+    '%count% question(s) processed.' => '%count% question(s) traitée(s).',
 ];

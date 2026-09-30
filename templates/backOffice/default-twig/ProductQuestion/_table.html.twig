@@ -4,6 +4,11 @@
     <table class="table table-striped align-middle" data-testid="product-question-table">
         <thead>
             <tr>
+                {% if canModerateInBulk %}
+                    <th scope="col" class="text-center">
+                        <input type="checkbox" class="form-check-input" data-bo-bulk-select-target="all" data-action="change->bo-bulk-select#toggleAll" aria-label="{{ 'Select every question of this page'|trans({}, domain) }}" data-testid="product-question-select-all">
+                    </th>
+                {% endif %}
                 <th scope="col">{{ 'Question'|trans({}, domain) }}</th>
                 <th scope="col">{{ 'Product'|trans({}, domain) }}</th>
                 <th scope="col">{{ 'Customer'|trans({}, domain) }}</th>
@@ -17,6 +22,11 @@
         <tbody>
             {% for row in rows %}
                 <tr data-testid="product-question-row-{{ row.id }}">
+                    {% if canModerateInBulk %}
+                        <td class="text-center">
+                            <input type="checkbox" class="form-check-input" name="ids[]" value="{{ row.id }}" data-bo-bulk-select-target="row" data-action="change->bo-bulk-select#onRow" aria-label="{{ 'Select this question'|trans({}, domain) }}" data-testid="product-question-select-{{ row.id }}">
+                        </td>
+                    {% endif %}
                     <td>{{ row.excerpt }}</td>
                     <td>{{ row.productTitle ?? ('Product #%id%'|trans({'%id%': row.productId}, domain)) }}</td>
                     <td>{{ row.customerName ?? ('Deleted account'|trans({}, domain)) }}</td>
