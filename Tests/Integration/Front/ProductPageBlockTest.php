@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace ProductQuestion\Tests\Integration\Front;
 
 use ProductQuestion\Model\ProductQuestion;
+use ProductQuestion\Model\ProductQuestionAnswer;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Repository\ClosedProductRepository;
 use ProductQuestion\Service\ModuleConfigProductQuestionSettings;
@@ -271,6 +272,28 @@ final class ProductPageBlockTest extends WebIntegrationTestCase
         self::assertSame('Posée en anglais', trim($page->filter('[data-testid="product-question-language-'.$english->getId().'"]')->text()));
     }
 
+    /**
+     * The product page costs the same number of queries with one question as with eight: the
+     * questions and their answers are read in a fixed number of queries, never one per question.
+     */
+    public function testThePageCostsTheSameQueriesWhateverTheNumberOfQuestions(): void
+    {
+        $this->answer($this->publish('Question number 1?'), true);
+
+        $withOne = $this->queriesOfThePage();
+
+        for ($i = 2; $i <= 8; ++$i) {
+            $question = $this->publish('Question number '.$i.'?');
+            $this->answer($question, true);
+            $this->answer($question, false);
+        }
+
+        $withEight = $this->queriesOfThePage();
+
+        self::assertCount(8, $this->block()->filter('[data-testid^="product-question-item-"]'));
+        self::assertSame($withOne, $withEight, 'Every question added to the page costs queries of its own.');
+    }
+
     private function publish(string $content, string $locale = 'en_US'): ProductQuestion
     {
         $question = (new ProductQuestion())
@@ -281,6 +304,37 @@ final class ProductPageBlockTest extends WebIntegrationTestCase
         $question->save();
 
         return $question;
+    }
+
+    private function answer(ProductQuestion $question, bool $official): void
+    {
+        (new ProductQuestionAnswer())
+            ->setQuestionId((int) $question->getId())
+            ->setIsOfficial($official)
+            ->setContent('An answer.')
+            ->setHelpfulCount(0)
+            ->setStatusEnum(ProductQuestionStatus::Published)
+            ->save();
+    }
+
+    /**
+     * The queries of one render of the product page, measured after a first render so that
+     * what the page reads once and keeps is not counted.
+     */
+    private function queriesOfThePage(): int
+    {
+        $this->page();
+
+        $connection = $this->getPropelConnection();
+        $connection->useDebug(true);
+        $before = $connection->getQueryCount();
+
+        $this->page();
+
+        $queries = $connection->getQueryCount() - $before;
+        $connection->useDebug(false);
+
+        return $queries;
     }
 
     private function page(string $query = ''): Crawler
