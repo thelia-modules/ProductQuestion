@@ -34,6 +34,10 @@ use Symfony\Component\Validator\Constraints\NotBlank;
  * helpful), and for a client written against 1.2.0 the shop's answer and its date on their
  * own. Neither who asked nor who answered is ever readable, and the list is public.
  *
+ * `search` narrows the list to the questions whose text, or one of whose published answers,
+ * contains the term, once the product has more published questions than the threshold the shop
+ * set. Below it, or with no threshold, the parameter is ignored: the list is the product page's.
+ *
  * Posting sits under /front/account, which the firewall locks to a signed-in customer, and
  * says so again in its own security rule: an operation without one is open by accident.
  *

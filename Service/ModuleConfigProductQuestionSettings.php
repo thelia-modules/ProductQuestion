@@ -20,6 +20,9 @@ final readonly class ModuleConfigProductQuestionSettings implements ProductQuest
     public const ALLOW_CUSTOMER_ANSWERS = 'allow_customer_answers';
     public const QUESTIONS_CLOSED = 'questions_closed';
     public const QUESTIONS_PER_PAGE = 'questions_per_page';
+    public const SEARCH_THRESHOLD = 'search_threshold';
+
+    public const MAXIMUM_SEARCH_THRESHOLD = 10000;
 
     /** A page larger than this is a page nobody reads, and a query nobody needs. */
     public const MAXIMUM_PER_PAGE = 100;
@@ -53,6 +56,16 @@ final readonly class ModuleConfigProductQuestionSettings implements ProductQuest
     public function setQuestionsPerPage(int $perPage): void
     {
         ProductQuestion::setConfigValue(self::QUESTIONS_PER_PAGE, (string) self::bounded((string) $perPage, self::MAXIMUM_PER_PAGE));
+    }
+
+    public function searchThreshold(): int
+    {
+        return self::bounded(ProductQuestion::getConfigValue(self::SEARCH_THRESHOLD, '0'), self::MAXIMUM_SEARCH_THRESHOLD);
+    }
+
+    public function setSearchThreshold(int $threshold): void
+    {
+        ProductQuestion::setConfigValue(self::SEARCH_THRESHOLD, (string) self::bounded((string) $threshold, self::MAXIMUM_SEARCH_THRESHOLD));
     }
 
     /**

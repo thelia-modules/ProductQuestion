@@ -20,6 +20,11 @@
             <input class="form-control" type="number" min="0" max="100" step="1" id="pq-questions-per-page" name="questions_per_page" value="{{ questionsPerPage }}" aria-describedby="pq-questions-per-page-help">
             <p class="text-muted small mb-0" id="pq-questions-per-page-help">{{ '0 shows every question on one page. Above that, a "Show more" link loads the next ones.'|trans({}, domain) }}</p>
         </div>
+        <div class="col-auto">
+            <label class="form-label" for="pq-search-threshold">{{ 'Offer a search above this number of published questions'|trans({}, domain) }}</label>
+            <input class="form-control" type="number" min="0" max="10000" step="1" id="pq-search-threshold" name="search_threshold" value="{{ searchThreshold }}" aria-describedby="pq-search-threshold-help">
+            <p class="text-muted small mb-0" id="pq-search-threshold-help">{{ '0 never offers a search. The search looks into the questions and their published answers.'|trans({}, domain) }}</p>
+        </div>
     </div>
     <div>
         <button type="submit" class="btn btn-sm btn-primary" data-testid="product-question-settings-save">{{ 'Save the settings'|trans({}, domain) }}</button>

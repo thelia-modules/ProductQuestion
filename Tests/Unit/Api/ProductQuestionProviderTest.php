@@ -24,6 +24,8 @@ use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Model\ProductQuestionAnswer;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Service\Api\ProductQuestionPayloadMapper;
+use ProductQuestion\Service\Front\ProductQuestionSearchOffer;
+use ProductQuestion\Tests\Double\FixedSettings;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionAnswerStorage;
 use ProductQuestion\Tests\Double\InMemoryProductQuestionStorage;
 use ProductQuestion\Tests\Double\InMemoryProductVisibility;
@@ -41,8 +43,11 @@ final class ProductQuestionProviderTest extends TestCase
 
     private InMemoryProductQuestionAnswerStorage $answers;
 
+    private FixedSettings $settings;
+
     protected function setUp(): void
     {
+        $this->settings = new FixedSettings();
         $this->answers = new InMemoryProductQuestionAnswerStorage();
         $this->storage = new InMemoryProductQuestionStorage([
             $this->question(1, 12, 'fr_FR', ProductQuestionStatus::Published, 'Compatible ?', 'Oui.'),
@@ -92,6 +97,7 @@ final class ProductQuestionProviderTest extends TestCase
             $requestStack,
             new InMemoryProductVisibility($visibleProductIds),
             $this->answers,
+            new ProductQuestionSearchOffer($this->settings),
         );
     }
 
@@ -213,5 +219,36 @@ final class ProductQuestionProviderTest extends TestCase
     public function testAQuestionOfAnOfflineProductIsNotReadableByItsId(): void
     {
         self::assertNull($this->provider('fr_FR', [99])->provide(new Get(), ['id' => 1]));
+    }
+
+    /**
+     * Above the threshold, `search` narrows the list; the count that decides it is only run
+     * when a search is asked for.
+     */
+    public function testASearchNarrowsTheListAboveTheThreshold(): void
+    {
+        $this->storage->save($this->question(6, 12, 'fr_FR', ProductQuestionStatus::Published, 'Pliable ?'));
+        $this->settings->setSearchThreshold(1);
+
+        self::assertSame([6], array_map(static fn (ProductQuestionResource $item): ?int => $item->id, $this->collection(['productId' => 12, 'locale' => 'fr_FR', 'search' => 'pliable'])));
+        self::assertSame(1, $this->storage->publishedCounts);
+
+        $this->collection(['productId' => 12, 'locale' => 'fr_FR']);
+        self::assertSame(1, $this->storage->publishedCounts, 'No search, no count.');
+    }
+
+    /**
+     * Below the threshold the page shows no search field, and the API ignores the parameter.
+     */
+    public function testASearchBelowTheThresholdIsIgnored(): void
+    {
+        $this->storage->save($this->question(6, 12, 'fr_FR', ProductQuestionStatus::Published, 'Pliable ?'));
+
+        $this->settings->setSearchThreshold(2);
+        self::assertCount(2, $this->collection(['productId' => 12, 'locale' => 'fr_FR', 'search' => 'pliable']));
+
+        $this->settings->setSearchThreshold(0);
+        self::assertCount(2, $this->collection(['productId' => 12, 'locale' => 'fr_FR', 'search' => 'pliable']));
+        self::assertSame(1, $this->storage->publishedCounts, 'No threshold, no count.');
     }
 }

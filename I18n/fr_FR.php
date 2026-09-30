@@ -50,4 +50,10 @@ return [
     'This product no longer takes questions.' => 'Ce produit ne reçoit plus de nouvelles questions.',
 
     'Show more questions' => 'Voir plus de questions',
+
+    'Search the questions' => 'Rechercher dans les questions',
+    'Search' => 'Rechercher',
+    'Clear the search' => 'Effacer la recherche',
+    '%count% question(s) match "%term%".' => '%count% question(s) correspondent à « %term% ».',
+    'No question matches "%term%".' => 'Aucune question ne correspond à « %term% ».',
 ];

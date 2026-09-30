@@ -36,6 +36,9 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
     /** @var list<array{offset: int, limit: int}> */
     public array $publishedPageCalls = [];
 
+    /** How many times the unfiltered count of a product page was asked for. */
+    public int $publishedCounts = 0;
+
     private int $nextId = 1;
 
     /**
@@ -64,7 +67,7 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
     /**
      * @return list<ProductQuestion>
      */
-    public function findPublishedForProduct(int $productId, string $locale): array
+    public function findPublishedForProduct(int $productId, string $locale, ?string $search = null): array
     {
         $found = [];
 
@@ -81,6 +84,12 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
                 continue;
             }
 
+            // The question's own text only: the answers live in another double. What the query
+            // does with them is proven against the database.
+            if (null !== $search && false === mb_stripos((string) $question->getContent(), $search)) {
+                continue;
+            }
+
             $found[] = $question;
         }
 
@@ -93,13 +102,20 @@ final class InMemoryProductQuestionStorage implements ProductQuestionStorageInte
     /**
      * @return array{items: list<ProductQuestion>, total: int}
      */
-    public function findPublishedForProductPage(int $productId, string $locale, int $offset, int $limit): array
+    public function findPublishedForProductPage(int $productId, string $locale, int $offset, int $limit, ?string $search = null): array
     {
         $this->publishedPageCalls[] = ['offset' => $offset, 'limit' => $limit];
 
-        $all = $this->findPublishedForProduct($productId, $locale);
+        $all = $this->findPublishedForProduct($productId, $locale, $search);
 
         return ['items' => \array_slice($all, $offset, $limit), 'total' => \count($all)];
+    }
+
+    public function countPublishedForProduct(int $productId, string $locale): int
+    {
+        ++$this->publishedCounts;
+
+        return \count($this->findPublishedForProduct($productId, $locale));
     }
 
     /**

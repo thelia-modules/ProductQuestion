@@ -20,7 +20,9 @@ use ProductQuestion\ProductQuestion;
 use ProductQuestion\Service\Front\CurrentCustomerInterface;
 use ProductQuestion\Service\Front\ProductQuestionAnswerLimiter;
 use ProductQuestion\Service\Front\ProductQuestionAskLimiter;
+use ProductQuestion\Service\Front\ProductQuestionSearchOffer;
 use ProductQuestion\Service\Front\PublishedQuestionsPresenter;
+use ProductQuestion\Service\Front\QuestionSearchTerm;
 use ProductQuestion\Service\ProductQuestionAsker;
 use ProductQuestion\Service\ProductQuestionAvailability;
 use ProductQuestion\Service\ProductQuestionCustomerAnswerer;
@@ -71,6 +73,13 @@ class ProductQuestionBlock
     #[LiveProp]
     public int $page = 1;
 
+    /**
+     * What the visitor searches the questions for. Typed in the field, or set on mount from the
+     * same field posted without JavaScript. Only applied while the product offers a search.
+     */
+    #[LiveProp(writable: true)]
+    public string $search = '';
+
     /** Set after a successful post; a form error would be lost, the props are rehydrated. */
     #[LiveProp]
     public ?string $feedback = null;
@@ -105,8 +114,11 @@ class ProductQuestionBlock
     /** Read once per render: the template asks through canAsk() and canAnswer() both. */
     private ?bool $open = null;
 
-    /** @var array{questions: list<array<string, mixed>>, total: int}|null */
+    /** @var array{questions: list<array<string, mixed>>, total: int, published: int}|null */
     private ?array $published = null;
+
+    /** The term the list was actually filtered with, once it has been read. */
+    private ?string $appliedSearch = null;
 
     public function __construct(
         private readonly TheliaFormFactory $formFactory,
@@ -122,6 +134,7 @@ class ProductQuestionBlock
         private readonly ProductQuestionSettingsInterface $settings,
         private readonly ProductQuestionHelpfulVoter $voter,
         private readonly ProductQuestionAvailability $availability,
+        private readonly ProductQuestionSearchOffer $searchOffer,
     ) {
     }
 
@@ -148,6 +161,11 @@ class ProductQuestionBlock
             'helpfulCount' => $this->trans('%count% customer(s) found this helpful'),
             'closed' => $this->trans('This product no longer takes questions.'),
             'more' => $this->trans('Show more questions'),
+            'searchLabel' => $this->trans('Search the questions'),
+            'searchButton' => $this->trans('Search'),
+            'searchClear' => $this->trans('Clear the search'),
+            'searchFound' => $this->trans('%count% question(s) match "%term%".'),
+            'searchNone' => $this->trans('No question matches "%term%".'),
         ];
     }
 
@@ -168,17 +186,57 @@ class ProductQuestionBlock
     }
 
     /**
-     * The next page, for the link a visitor without JavaScript follows.
+     * The link a visitor without JavaScript follows to the next page: the search it shows, if
+     * any, is kept.
      */
-    public function getNextPage(): int
+    public function getMoreHref(): string
     {
-        return $this->currentPage() + 1;
+        return '?'.http_build_query(array_filter([
+            'questions_page' => $this->currentPage() + 1,
+            'questions_search' => $this->getAppliedSearch(),
+        ], static fn (int|string|null $value): bool => null !== $value)).'#product-questions';
     }
 
     #[LiveAction]
     public function more(): void
     {
         $this->page = $this->currentPage() + 1;
+    }
+
+    /**
+     * Whether the product has enough published questions to offer a search in them.
+     */
+    public function isSearchOffered(): bool
+    {
+        return $this->searchOffer->isOfferedFor($this->published()['published']);
+    }
+
+    /** The term the list is filtered with, or null when it shows every question. */
+    public function getAppliedSearch(): ?string
+    {
+        $this->published();
+
+        return $this->appliedSearch;
+    }
+
+    /** How many questions the search found, all pages together. */
+    public function getSearchTotal(): int
+    {
+        return $this->published()['total'];
+    }
+
+    /** A new search starts from the first page of its results. */
+    #[LiveAction]
+    public function applySearch(): void
+    {
+        $this->page = 1;
+    }
+
+    #[LiveAction]
+    public function clearSearch(): void
+    {
+        $this->search = '';
+        $this->page = 1;
     }
 
     /**
@@ -350,11 +408,28 @@ class ProductQuestionBlock
     }
 
     /**
-     * @return array{questions: list<array<string, mixed>>, total: int}
+     * @return array{questions: list<array<string, mixed>>, total: int, published: int}
      */
     private function published(): array
     {
-        return $this->published ??= $this->presenter->forProduct($this->productId, $this->locale, $this->shownLimit());
+        if (null !== $this->published) {
+            return $this->published;
+        }
+
+        // Not a query more when the shop offers no search at all.
+        $search = $this->searchOffer->isEnabled() ? QuestionSearchTerm::normalize($this->search) : null;
+        $published = $this->presenter->forProduct($this->productId, $this->locale, $this->shownLimit(), $search);
+
+        // A term in the link of a product below the threshold: the field is not on the page, so
+        // the list is not filtered either.
+        if (null !== $search && !$this->searchOffer->isOfferedFor($published['published'])) {
+            $search = null;
+            $published = $this->presenter->forProduct($this->productId, $this->locale, $this->shownLimit());
+        }
+
+        $this->appliedSearch = $search;
+
+        return $this->published = $published;
     }
 
     private function perPage(): int

@@ -85,7 +85,7 @@ final class ProductQuestionBlockTemplateTest extends TestCase
 
     public function testTheHookMountsTheComponentWithTheProductAndTheLanguage(): void
     {
-        self::assertStringContainsString("component('ProductQuestion', {productId: productId, locale: locale, page: page})", $this->hookTemplate);
+        self::assertStringContainsString("component('ProductQuestion', {productId: productId, locale: locale, page: page, search: search})", $this->hookTemplate);
     }
 
     /**
@@ -106,7 +106,17 @@ final class ProductQuestionBlockTemplateTest extends TestCase
      */
     public function testShowMoreIsALinkAndALiveAction(): void
     {
-        self::assertMatchesRegularExpression('/\{% if this\.hasMore %\}.*href="\?questions_page=\{\{ this\.nextPage \}\}#product-questions".*data-live-action-param="more"/s', $this->template);
+        self::assertMatchesRegularExpression('/\{% if this\.hasMore %\}.*href="\{\{ this\.moreHref \}\}".*data-live-action-param="more"/s', $this->template);
         self::assertMatchesRegularExpression('/#\[LiveAction\]\s*public function more\(\): void/', $this->component);
+    }
+
+    /**
+     * The search is a GET form named as the theme hook reads it, filtered in place by the live
+     * action when JavaScript runs.
+     */
+    public function testTheSearchIsAGetFormAndALiveAction(): void
+    {
+        self::assertMatchesRegularExpression('/\{% if this\.searchOffered %\}.*<form[^>]*method="get"[^>]*data-live-action-param="applySearch".*name="questions_search".*input:data-model="norender\|search"/s', $this->template);
+        self::assertMatchesRegularExpression('/#\[LiveAction\]\s*public function applySearch\(\): void/', $this->component);
     }
 }

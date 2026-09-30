@@ -18,6 +18,33 @@
   margin-bottom: 1.5rem;
 }
 
+.ProductQuestion-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.ProductQuestion-searchField {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.ProductQuestion-searchSubmit {
+  flex: 0 0 auto;
+}
+
+.ProductQuestion-searchResult {
+  margin: 0 0 1.5rem;
+}
+
+.ProductQuestion-searchClear {
+  margin-left: 0.5rem;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
 .ProductQuestion-list {
   display: flex;
   flex-direction: column;

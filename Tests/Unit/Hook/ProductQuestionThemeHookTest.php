@@ -65,8 +65,8 @@ final class ProductQuestionThemeHookTest extends TestCase
     {
         $html = $this->hook()->render('product.bottom', ['product' => ['id' => 12]]);
 
-        self::assertStringContainsString('ProductQuestion:{"productId":12,"locale":"fr_FR","page":1}', $html);
-        self::assertStringContainsString('ProductQuestion:{"productId":12,"locale":"en_US","page":1}', $this->hook('en_US')->render('product.bottom', ['product' => ['id' => 12]]));
+        self::assertStringContainsString('ProductQuestion:{"productId":12,"locale":"fr_FR","page":1,"search":""}', $html);
+        self::assertStringContainsString('ProductQuestion:{"productId":12,"locale":"en_US","page":1,"search":""}', $this->hook('en_US')->render('product.bottom', ['product' => ['id' => 12]]));
     }
 
     public function testTheModuleStylesheetIsLinkedByTheHook(): void
@@ -113,5 +113,11 @@ final class ProductQuestionThemeHookTest extends TestCase
         foreach (['/?questions_page=abc', '/?questions_page[]=2', '/?questions_page=-4', '/?questions_page=0'] as $uri) {
             self::assertStringContainsString('"page":1', $this->hook('fr_FR', $uri)->render('product.bottom', ['product' => ['id' => 12]]), $uri);
         }
+    }
+
+    public function testTheSearchComesFromTheFieldPostedWithoutJavaScript(): void
+    {
+        self::assertStringContainsString('"search":"fold"', $this->hook('fr_FR', '/?questions_search=fold')->render('product.bottom', ['product' => ['id' => 12]]));
+        self::assertStringContainsString('"search":""', $this->hook('fr_FR', '/?questions_search[]=fold')->render('product.bottom', ['product' => ['id' => 12]]));
     }
 }

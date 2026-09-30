@@ -50,4 +50,10 @@ return [
     'This product no longer takes questions.' => 'This product no longer takes questions.',
 
     'Show more questions' => 'Show more questions',
+
+    'Search the questions' => 'Search the questions',
+    'Search' => 'Search',
+    'Clear the search' => 'Clear the search',
+    '%count% question(s) match "%term%".' => '%count% question(s) match "%term%".',
+    'No question matches "%term%".' => 'No question matches "%term%".',
 ];
