@@ -1,0 +1,35 @@
+{% set domain = 'productquestion.bo.default-twig' %}
+{% set canModerateInBulk = canUpdate or canDelete %}
+
+{# The table sits inside the form: the ticked boxes are the ids posted, with or without
+   JavaScript. bo-bulk-select only adds the "select all" box and the count. #}
+<form method="POST" action="{{ path('productquestion_module_bulk') }}?{{ filters.toQueryParams|url_encode }}" data-controller="bo-bulk-select" data-testid="product-question-bulk">
+    <input type="hidden" name="_token" value="{{ csrfToken }}">
+
+    {% if canModerateInBulk %}
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2" data-testid="product-question-bulk-bar">
+            <span class="badge text-bg-primary">
+                <span data-bo-bulk-select-target="count">0</span> {{ 'selected'|trans({}, domain) }}
+            </span>
+            {% if canUpdate %}
+                <button type="submit" name="decision" value="publish" class="btn btn-sm btn-outline-success" data-testid="product-question-bulk-publish">
+                    <i class="bi bi-check2" aria-hidden="true"></i> {{ 'Publish the selection'|trans({}, domain) }}
+                </button>
+                <button type="submit" name="decision" value="refuse" class="btn btn-sm btn-outline-secondary" data-testid="product-question-bulk-refuse">
+                    <i class="bi bi-x" aria-hidden="true"></i> {{ 'Refuse the selection'|trans({}, domain) }}
+                </button>
+            {% endif %}
+            {% if canDelete %}
+                <button type="submit" name="decision" value="delete" class="btn btn-sm btn-outline-danger"
+                        data-controller="confirm-modal"
+                        data-action="click->confirm-modal#confirm"
+                        data-confirm-modal-message-value="{{ 'Delete the selected questions and their answers? This cannot be undone.'|trans({}, domain) }}"
+                        data-testid="product-question-bulk-delete">
+                    <i class="bi bi-trash" aria-hidden="true"></i> {{ 'Delete the selection'|trans({}, domain) }}
+                </button>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {% include 'ProductQuestion/_table.html.twig' %}
+</form>

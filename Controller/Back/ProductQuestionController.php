@@ -21,6 +21,8 @@ use ProductQuestion\ProductQuestion as ProductQuestionModule;
 use ProductQuestion\Repository\ClosedProductStorageInterface;
 use ProductQuestion\Repository\ProductQuestionAnswerStorageInterface;
 use ProductQuestion\Repository\ProductQuestionStorageInterface;
+use ProductQuestion\Service\BackOffice\BulkDecision;
+use ProductQuestion\Service\BackOffice\ProductQuestionBulkModerator;
 use ProductQuestion\Service\BackOffice\ProductQuestionEditPresenter;
 use ProductQuestion\Service\BackOffice\ProductQuestionListFilters;
 use ProductQuestion\Service\BackOffice\ProductQuestionListPresenter;
@@ -32,6 +34,7 @@ use ProductQuestion\Service\ProductQuestionSettingsInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Thelia\Controller\Admin\BaseAdminController;
 use Thelia\Core\Security\AccessManager;
@@ -62,6 +65,7 @@ class ProductQuestionController extends BaseAdminController
         private readonly ProductQuestionAnswerModerator $answerModerator,
         private readonly ProductQuestionSettingsInterface $settings,
         private readonly ClosedProductStorageInterface $closedProducts,
+        private readonly ProductQuestionBulkModerator $bulkModerator,
     ) {
     }
 
@@ -78,6 +82,9 @@ class ProductQuestionController extends BaseAdminController
             ...$this->listPresenter->present($filters, $request->getLocale()),
             'allowsCustomerAnswers' => $this->settings->allowsCustomerAnswers(),
             'questionsClosed' => $this->settings->questionsClosed(),
+            // The bulk buttons follow the rights their route checks.
+            'canUpdate' => $this->isModuleGranted(AccessManager::UPDATE),
+            'canDelete' => $this->isModuleGranted(AccessManager::DELETE),
             'csrfToken' => $this->tokenProvider->assignToken(),
         ]);
     }
@@ -205,6 +212,54 @@ class ProductQuestionController extends BaseAdminController
         return $this->backToQuestion((int) $answer->getQuestionId());
     }
 
+    /**
+     * The questions ticked in the list, published, refused or deleted together. Back to the list
+     * with the filters it was drawn with.
+     */
+    #[Route('/ProductQuestion/bulk', name: '_bulk', methods: ['POST'])]
+    public function bulkAction(Request $request): Response
+    {
+        $decision = BulkDecision::tryFrom((string) $request->request->get('decision', ''));
+
+        if (null !== $denied = $this->checkModuleAccess(BulkDecision::Delete === $decision ? AccessManager::DELETE : AccessManager::UPDATE)) {
+            return $denied;
+        }
+
+        if (null !== $denied = $this->checkToken($request)) {
+            return $denied;
+        }
+
+        $filters = ProductQuestionListFilters::fromRequest($request);
+        $back = new RedirectResponse(URL::getInstance()->absoluteUrl(ProductQuestionModule::ADMIN_LIST_PATH, $filters->toQueryParams()));
+
+        if (null === $decision) {
+            return $back;
+        }
+
+        $ids = array_map(intval(...), array_filter($request->request->all('ids'), is_numeric(...)));
+        $done = $this->bulkModerator->apply($decision, array_values($ids));
+
+        foreach ($done as $questionId) {
+            $this->log(
+                BulkDecision::Delete === $decision ? AccessManager::DELETE : AccessManager::UPDATE,
+                \sprintf('Product question %d %s (bulk)', $questionId, $decision->pastTense()),
+                $questionId,
+            );
+        }
+
+        $session = $request->hasSession() ? $request->getSession() : null;
+
+        if ($session instanceof FlashBagAwareSessionInterface) {
+            $session->getFlashBag()->add('success', $this->getTranslator()->trans(
+                '%count% question(s) processed.',
+                ['%count%' => \count($done)],
+                ProductQuestionModule::MESSAGE_DOMAIN_BO,
+            ));
+        }
+
+        return $back;
+    }
+
     #[Route('/ProductQuestion/settings', name: '_settings', methods: ['POST'])]
     public function settingsAction(Request $request): Response
     {
@@ -299,6 +354,11 @@ class ProductQuestionController extends BaseAdminController
     private function checkModuleAccess(string $access): ?Response
     {
         return $this->checkAuth([], [ProductQuestionModule::getModuleCode()], $access);
+    }
+
+    private function isModuleGranted(string $access): bool
+    {
+        return $this->securityContext->isGranted(['ADMIN'], [], [ProductQuestionModule::getModuleCode()], [$access]);
     }
 
     private function checkToken(Request $request): ?Response

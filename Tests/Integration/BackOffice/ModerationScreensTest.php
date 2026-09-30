@@ -192,6 +192,64 @@ final class ModerationScreensTest extends WebIntegrationTestCase
         self::assertSame($before - 1, $this->menuCount());
     }
 
+    public function testTheTickedQuestionsArePublishedTogetherAndEachIsLogged(): void
+    {
+        $other = (new ProductQuestion())
+            ->setProductId((int) $this->question->getProductId())
+            ->setLocale('en_US')
+            ->setContent('Second question in the batch?')
+            ->setStatusEnum(ProductQuestionStatus::Pending);
+        $other->save();
+        $ids = [(int) $this->question->getId(), (int) $other->getId()];
+
+        $crawler = $this->client->request('GET', self::LIST_URL.'?product_id='.$this->question->getProductId());
+        $form = $crawler->filter('[data-testid="product-question-bulk"]');
+        self::assertCount(2, $form->filter('input[name="ids[]"]'));
+        $action = (string) $form->attr('action');
+        $token = (string) $form->filter('input[name="_token"]')->attr('value');
+
+        $this->client->request('POST', $action, ['_token' => 'forged', 'decision' => 'publish', 'ids' => $ids]);
+        self::assertSame(0, ProductQuestionQuery::create()->filterById($ids)->filterByStatus(ProductQuestionStatus::Published->value)->count(), 'A forged token changes nothing.');
+
+        $this->client->request('POST', $action, ['_token' => $token, 'decision' => 'publish', 'ids' => $ids]);
+
+        self::assertSame(302, $this->client->getResponse()->getStatusCode());
+        self::assertStringContainsString('product_id='.$this->question->getProductId(), (string) $this->client->getResponse()->headers->get('Location'), 'Back to the list as it was filtered.');
+        self::assertSame(2, ProductQuestionQuery::create()->filterById($ids)->filterByStatus(ProductQuestionStatus::Published->value)->count());
+        self::assertSame(2, AdminLogQuery::create()->filterByResource('ProductQuestion')->filterByResourceId($ids)->filterByMessage('%(bulk)', \Propel\Runtime\ActiveQuery\Criteria::LIKE)->count());
+    }
+
+    public function testTheTickedQuestionsAreDeletedTogether(): void
+    {
+        $crawler = $this->client->request('GET', self::LIST_URL);
+        $form = $crawler->filter('[data-testid="product-question-bulk"]');
+
+        $this->client->request('POST', (string) $form->attr('action'), [
+            '_token' => (string) $form->filter('input[name="_token"]')->attr('value'),
+            'decision' => 'delete',
+            'ids' => [(int) $this->question->getId()],
+        ]);
+
+        self::assertNull(ProductQuestionQuery::create()->findPk($this->question->getId()));
+        self::assertSame(1, $this->logLines());
+    }
+
+    public function testAnUnknownDecisionChangesNothing(): void
+    {
+        $crawler = $this->client->request('GET', self::LIST_URL);
+        $form = $crawler->filter('[data-testid="product-question-bulk"]');
+
+        $this->client->request('POST', (string) $form->attr('action'), [
+            '_token' => (string) $form->filter('input[name="_token"]')->attr('value'),
+            'decision' => 'archive',
+            'ids' => [(int) $this->question->getId()],
+        ]);
+
+        self::assertSame(302, $this->client->getResponse()->getStatusCode());
+        self::assertSame(ProductQuestionStatus::Pending->value, ProductQuestionQuery::create()->findPk($this->question->getId())?->getStatus());
+        self::assertSame(0, $this->logLines());
+    }
+
     private function menuCount(): int
     {
         $crawler = $this->client->request('GET', self::LIST_URL);
