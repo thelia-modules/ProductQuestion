@@ -117,6 +117,41 @@ final class ProductQuestionAnswerRepositoryTest extends IntegrationTestCase
         self::assertSame('Plain?', $page['items'][0]->getContent());
     }
 
+    /**
+     * The database holds the rule: a second vote of the same customer is not counted, and the
+     * counters of the answer and of its question follow the votes.
+     */
+    public function testAVoteCountsOncePerCustomerAndMovesBothCounters(): void
+    {
+        $question = $this->question('Q?');
+        $answer = $this->answer($question, 'a', ProductQuestionStatus::Published);
+        $other = $this->createFixtureFactory()->customer($this->createFixtureFactory()->customerTitle());
+
+        self::assertTrue($this->answers->addVote((int) $answer->getId(), (int) $this->customer->getId()));
+        self::assertFalse($this->answers->addVote((int) $answer->getId(), (int) $this->customer->getId()));
+        self::assertTrue($this->answers->addVote((int) $answer->getId(), (int) $other->getId()));
+
+        self::assertSame(2, ProductQuestionAnswerQuery::create()->findPk($answer->getId())?->getHelpfulCount());
+        self::assertSame(2, ProductQuestionQuery::create()->findPk($question->getId())?->getHelpfulCount());
+        self::assertSame([(int) $answer->getId()], $this->answers->findVotedAnswerIdsByCustomer((int) $this->customer->getId()));
+    }
+
+    /**
+     * Anonymized, the votes keep counting and nobody can tell whose they were.
+     */
+    public function testDetachingACustomerKeepsTheirVotesCounting(): void
+    {
+        $question = $this->question('Q?');
+        $answer = $this->answer($question, 'a', ProductQuestionStatus::Published);
+        $this->answers->addVote((int) $answer->getId(), (int) $this->customer->getId());
+
+        $this->answers->detachCustomer((int) $this->customer->getId());
+
+        self::assertSame([], $this->answers->findVotedAnswerIdsByCustomer((int) $this->customer->getId()));
+        self::assertNull(ProductQuestionAnswerQuery::create()->findPk($answer->getId())?->getCustomerId());
+        self::assertSame(1, ProductQuestionAnswerQuery::create()->findPk($answer->getId())?->getHelpfulCount());
+    }
+
     public function testDeletingAQuestionTakesItsAnswers(): void
     {
         $question = $this->question('Q?');

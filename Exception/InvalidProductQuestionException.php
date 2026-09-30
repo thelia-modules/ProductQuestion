@@ -75,4 +75,14 @@ final class InvalidProductQuestionException extends \DomainException
     {
         return new self(\sprintf('An answer must be at least %d characters long.', $minimum));
     }
+
+    public static function unknownAnswer(): self
+    {
+        return new self('This answer cannot be voted for.');
+    }
+
+    public static function ownAnswer(): self
+    {
+        return new self('An answer cannot be voted for by its author.');
+    }
 }

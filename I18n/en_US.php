@@ -33,4 +33,10 @@ return [
     'Your answer could not be sent. Please check it and try again.' => 'Your answer could not be sent. Please check it and try again.',
     'Too many answers have been sent. Please try again later.' => 'Too many answers have been sent. Please try again later.',
     'Thank you! Your answer has been sent to the shop and will appear here once published.' => 'Thank you! Your answer has been sent to the shop and will appear here once published.',
+    'This answer helped me' => 'This answer helped me',
+    '%count% customer(s) found this helpful' => '%count% customer(s) found this helpful',
+    'Sign in to say an answer helped you.' => 'Sign in to say an answer helped you.',
+    'Your vote could not be counted.' => 'Your vote could not be counted.',
+    'Thank you, your vote has been counted.' => 'Thank you, your vote has been counted.',
+    'Your vote was already counted.' => 'Your vote was already counted.',
 ];

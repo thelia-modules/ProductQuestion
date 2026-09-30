@@ -22,6 +22,7 @@ use ProductQuestion\Service\Front\ProductQuestionAskLimiter;
 use ProductQuestion\Service\Front\PublishedQuestionsPresenter;
 use ProductQuestion\Service\ProductQuestionAsker;
 use ProductQuestion\Service\ProductQuestionCustomerAnswerer;
+use ProductQuestion\Service\ProductQuestionHelpfulVoter;
 use ProductQuestion\Service\ProductQuestionSettingsInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -83,6 +84,13 @@ class ProductQuestionBlock
     #[LiveProp]
     public bool $answerFeedbackIsError = false;
 
+    /** Set after a helpful vote, shown under the answer it was cast for. */
+    #[LiveProp]
+    public ?int $voteFeedbackAnswerId = null;
+
+    #[LiveProp]
+    public ?string $voteFeedback = null;
+
     public function __construct(
         private readonly TheliaFormFactory $formFactory,
         private readonly ProductQuestionAsker $asker,
@@ -95,6 +103,7 @@ class ProductQuestionBlock
         private readonly ProductQuestionCustomerAnswerer $customerAnswerer,
         private readonly ProductQuestionAnswerLimiter $answerLimiter,
         private readonly ProductQuestionSettingsInterface $settings,
+        private readonly ProductQuestionHelpfulVoter $voter,
     ) {
     }
 
@@ -117,6 +126,8 @@ class ProductQuestionBlock
             'yourAnswer' => $this->trans('Your answer'),
             'sendAnswer' => $this->trans('Send my answer'),
             'cancel' => $this->trans('Cancel'),
+            'helpful' => $this->trans('This answer helped me'),
+            'helpfulCount' => $this->trans('%count% customer(s) found this helpful'),
         ];
     }
 
@@ -136,6 +147,37 @@ class ProductQuestionBlock
     public function canAnswer(): bool
     {
         return $this->settings->allowsCustomerAnswers() && null !== $this->currentCustomer->id();
+    }
+
+    /**
+     * The count is recounted from the votes on the next render; what the visitor sees here is
+     * whether theirs was taken. Nothing marks a button as already clicked in the page itself: the
+     * product page may come from a shared cache, and must not carry anything of one visitor.
+     */
+    #[LiveAction]
+    public function vote(#[LiveArg] int $answerId): void
+    {
+        $this->voteFeedbackAnswerId = $answerId;
+
+        $customerId = $this->currentCustomer->id();
+
+        if (null === $customerId) {
+            $this->voteFeedback = $this->trans('Sign in to say an answer helped you.');
+
+            return;
+        }
+
+        try {
+            $counted = $this->voter->vote($answerId, $customerId);
+        } catch (InvalidProductQuestionException) {
+            $this->voteFeedback = $this->trans('Your vote could not be counted.');
+
+            return;
+        }
+
+        $this->voteFeedback = $counted
+            ? $this->trans('Thank you, your vote has been counted.')
+            : $this->trans('Your vote was already counted.');
     }
 
     #[LiveAction]

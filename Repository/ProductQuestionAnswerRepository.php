@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace ProductQuestion\Repository;
 
 use ProductQuestion\Model\Map\ProductQuestionAnswerTableMap;
+use ProductQuestion\Model\Map\ProductQuestionTableMap;
 use ProductQuestion\Model\ProductQuestionAnswer;
 use ProductQuestion\Model\ProductQuestionAnswerQuery;
 use ProductQuestion\Model\ProductQuestionAnswerVoteQuery;
@@ -135,6 +136,10 @@ final readonly class ProductQuestionAnswerRepository implements ProductQuestionA
             $this->refreshQuestionHelpfulCount($questionId);
         }
 
+        // The counters were written by SQL: an answer already loaded in this request would still
+        // carry the old one.
+        ProductQuestionAnswerTableMap::removeInstanceFromPool($answerId);
+
         return true;
     }
 
@@ -167,6 +172,8 @@ final readonly class ProductQuestionAnswerRepository implements ProductQuestionA
         Propel::getWriteConnection(ProductQuestionAnswerTableMap::DATABASE_NAME)
             ->prepare('UPDATE product_question SET helpful_count = (SELECT COALESCE(SUM(a.helpful_count), 0) FROM product_question_answer a WHERE a.question_id = product_question.id AND a.status = :published) WHERE id = :question')
             ->execute(['published' => ProductQuestionStatus::Published->value, 'question' => $questionId]);
+
+        ProductQuestionTableMap::removeInstanceFromPool($questionId);
     }
 
     public function save(ProductQuestionAnswer $answer): void

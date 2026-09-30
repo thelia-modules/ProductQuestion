@@ -73,8 +73,7 @@ final class ProductQuestionAnswerApiTest extends ApiTestCase
 
         self::assertSame(404, $this->jsonRequest('GET', '/api/front/product_question_answers/'.$body['id'])->getStatusCode());
 
-        $list = self::decodeJson($this->jsonRequest('GET', '/api/front/product_questions?productId='.$this->product->getId().'&locale=en_US', format: 'json'));
-        self::assertSame([], $list[0]['answers']);
+        self::assertSame([], $this->listedQuestion()['answers']);
     }
 
     public function testAnAnonymousVisitorCannotAnswer(): void
@@ -101,8 +100,64 @@ final class ProductQuestionAnswerApiTest extends ApiTestCase
         self::assertSame(200, $response->getStatusCode());
         self::assertTrue(self::decodeJson($response)['official']);
 
+        $listed = $this->listedQuestion();
+        self::assertSame('Yes, flat.', $listed['answer']);
+        self::assertSame([(int) $answer->getId()], array_column($listed['answers'], 'id'));
+    }
+
+    /**
+     * Voting twice counts once, over HTTP as in the block.
+     */
+    public function testAHelpfulVoteCountsOncePerCustomer(): void
+    {
+        $answer = (new ProductQuestionAnswer())
+            ->setQuestionId((int) $this->question->getId())
+            ->setIsOfficial(true)
+            ->setContent('Yes, flat.')
+            ->setStatusEnum(ProductQuestionStatus::Published)
+            ->setPublishedAt(new \DateTimeImmutable());
+        $answer->save();
+        $token = $this->authenticateAsCustomer();
+
+        $first = $this->jsonRequest('POST', '/api/front/account/product_question_answers/'.$answer->getId().'/helpful', token: $token, format: 'json');
+        $second = $this->jsonRequest('POST', '/api/front/account/product_question_answers/'.$answer->getId().'/helpful', token: $token, format: 'json');
+
+        self::assertSame(200, $first->getStatusCode(), (string) $first->getContent());
+        self::assertSame(1, self::decodeJson($first)['helpfulCount']);
+        self::assertSame(200, $second->getStatusCode());
+        self::assertSame(1, self::decodeJson($second)['helpfulCount']);
+        self::assertSame(1, ProductQuestionAnswerQuery::create()->findPk($answer->getId())?->getHelpfulCount());
+    }
+
+    public function testAVoteOnAnAnswerOffThePageIsANotFound(): void
+    {
+        $answer = (new ProductQuestionAnswer())
+            ->setQuestionId((int) $this->question->getId())
+            ->setContent('Pending one.')
+            ->setStatusEnum(ProductQuestionStatus::Pending);
+        $answer->save();
+
+        $response = $this->jsonRequest('POST', '/api/front/account/product_question_answers/'.$answer->getId().'/helpful', token: $this->authenticateAsCustomer(), format: 'json');
+
+        self::assertSame(404, $response->getStatusCode());
+        self::assertSame(0, ProductQuestionAnswerQuery::create()->findPk($answer->getId())?->getHelpfulCount());
+    }
+
+    public function testAnAnonymousVisitorCannotVote(): void
+    {
+        self::assertSame(401, $this->jsonRequest('POST', '/api/front/account/product_question_answers/1/helpful', format: 'json')->getStatusCode());
+    }
+
+    /**
+     * @return array<string, mixed> the one question the product has, as the list serves it
+     */
+    private function listedQuestion(): array
+    {
+        /** @var list<array<string, mixed>> $list */
         $list = self::decodeJson($this->jsonRequest('GET', '/api/front/product_questions?productId='.$this->product->getId().'&locale=en_US', format: 'json'));
-        self::assertSame('Yes, flat.', $list[0]['answer']);
-        self::assertSame([(int) $answer->getId()], array_column($list[0]['answers'], 'id'));
+
+        self::assertCount(1, $list);
+
+        return $list[0];
     }
 }

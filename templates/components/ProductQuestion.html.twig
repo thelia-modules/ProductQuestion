@@ -34,6 +34,21 @@
                                         {% endif %}
                                     </p>
                                     <p class="paragraph-3 text-black">{{ answer.content|nl2br }}</p>
+                                    <div class="ProductQuestion-helpful">
+                                        <span class="paragraph-4 text-grey" data-testid="product-question-helpful-count-{{ answer.id }}">{{ labels.helpfulCount|replace({'%count%': answer.helpfulCount}) }}</span>
+                                        <twig:Molecules:Button:Base
+                                            text="{{ labels.helpful }}"
+                                            color="minimal"
+                                            size="small"
+                                            data-action="live#action"
+                                            data-live-action-param="vote"
+                                            data-live-answer-id-param="{{ answer.id }}"
+                                            data-testid="product-question-helpful-{{ answer.id }}"
+                                        />
+                                    </div>
+                                    {% if this.voteFeedback and this.voteFeedbackAnswerId == answer.id %}
+                                        <p class="paragraph-4 text-black" role="status" data-testid="product-question-vote-feedback-{{ answer.id }}">{{ this.voteFeedback }}</p>
+                                    {% endif %}
                                 </li>
                             {% endfor %}
                         </ul>
