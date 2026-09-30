@@ -17,6 +17,7 @@ use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Repository\ClosedProductRepository;
 use ProductQuestion\Service\ModuleConfigProductQuestionSettings;
+use ProductQuestion\Twig\ProductQuestionBlock;
 use Symfony\Component\DomCrawler\Crawler;
 use Thelia\Core\Template\TemplateHelperInterface;
 use Thelia\Model\Product;
@@ -137,6 +138,27 @@ final class ProductPageBlockTest extends WebIntegrationTestCase
         $block = $this->block('?questions_page=3');
         self::assertCount(5, $block->filter('[data-testid^="product-question-item-"]'));
         self::assertCount(0, $block->filter('[data-testid="product-question-more"]'), 'Nothing left to show.');
+    }
+
+    /**
+     * Past the last page "Show more" drew the very same list again, forever: at the cap the link
+     * is gone, even with questions left.
+     */
+    public function testTheLinkIsGoneAtTheLastPageThatCanBeShown(): void
+    {
+        (new ModuleConfigProductQuestionSettings())->setQuestionsPerPage(1);
+
+        for ($i = 1; $i <= ProductQuestionBlock::MAXIMUM_PAGE + 1; ++$i) {
+            $this->publish('Question number '.$i.'?');
+        }
+
+        $block = $this->block('?questions_page='.(ProductQuestionBlock::MAXIMUM_PAGE - 1));
+        self::assertCount(ProductQuestionBlock::MAXIMUM_PAGE - 1, $block->filter('[data-testid^="product-question-item-"]'));
+        self::assertCount(1, $block->filter('[data-testid="product-question-more"]'));
+
+        $block = $this->block('?questions_page='.ProductQuestionBlock::MAXIMUM_PAGE);
+        self::assertCount(ProductQuestionBlock::MAXIMUM_PAGE, $block->filter('[data-testid^="product-question-item-"]'));
+        self::assertCount(0, $block->filter('[data-testid="product-question-more"]'), 'The next page would be this one again.');
     }
 
     /**

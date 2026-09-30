@@ -179,11 +179,14 @@ class ProductQuestionBlock
     }
 
     /**
-     * Whether there are published questions past the ones shown.
+     * Whether there are published questions past the ones shown, and a page left to show them:
+     * at the last page the link would only draw the same list again.
      */
     public function hasMore(): bool
     {
-        return $this->perPage() > 0 && $this->published()['total'] > $this->shownLimit();
+        return $this->perPage() > 0
+            && $this->currentPage() < self::MAXIMUM_PAGE
+            && $this->published()['total'] > $this->shownLimit();
     }
 
     /**
