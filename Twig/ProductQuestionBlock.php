@@ -57,8 +57,6 @@ class ProductQuestionBlock
     use ComponentToolsTrait;
     use ComponentWithFormTrait;
     use DefaultActionTrait;
-    /** Pages shown at most by "Show more", which bounds the one query of the list. */
-    public const MAXIMUM_PAGE = 50;
 
     #[LiveProp]
     public int $productId = 0;
@@ -179,14 +177,13 @@ class ProductQuestionBlock
     }
 
     /**
-     * Whether there are published questions past the ones shown, and a page left to show them:
-     * at the last page the link would only draw the same list again.
+     * Whether there are published questions past the ones shown. The page has no cap of its own,
+     * so the link leads to every question however many there are: the list stays bounded by the
+     * questions that exist.
      */
     public function hasMore(): bool
     {
-        return $this->perPage() > 0
-            && $this->currentPage() < self::MAXIMUM_PAGE
-            && $this->published()['total'] > $this->shownLimit();
+        return $this->perPage() > 0 && $this->published()['total'] > $this->shownLimit();
     }
 
     /**
@@ -204,7 +201,7 @@ class ProductQuestionBlock
     #[LiveAction]
     public function more(): void
     {
-        $this->page = $this->currentPage() + 1;
+        $this->page = min($this->currentPage() + 1, $this->lastPage());
     }
 
     /**
@@ -466,10 +463,16 @@ class ProductQuestionBlock
         return $this->perPage() * $this->currentPage();
     }
 
-    /** The page prop is a number anyone can put in the link: kept to what exists. */
+    /** The page prop is a number anyone can put in the link: kept to what an integer holds. */
     private function currentPage(): int
     {
-        return max(1, min($this->page, self::MAXIMUM_PAGE));
+        return max(1, min($this->page, $this->lastPage()));
+    }
+
+    /** The highest page whose number of questions still fits an integer. */
+    private function lastPage(): int
+    {
+        return $this->perPage() > 0 ? intdiv(\PHP_INT_MAX, $this->perPage()) : 1;
     }
 
     private function trans(string $key): string

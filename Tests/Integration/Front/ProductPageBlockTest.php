@@ -17,7 +17,6 @@ use ProductQuestion\Model\ProductQuestion;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Repository\ClosedProductRepository;
 use ProductQuestion\Service\ModuleConfigProductQuestionSettings;
-use ProductQuestion\Twig\ProductQuestionBlock;
 use Symfony\Component\DomCrawler\Crawler;
 use Thelia\Core\Template\TemplateHelperInterface;
 use Thelia\Model\Product;
@@ -141,24 +140,40 @@ final class ProductPageBlockTest extends WebIntegrationTestCase
     }
 
     /**
-     * Past the last page "Show more" drew the very same list again, forever: at the cap the link
-     * is gone, even with questions left.
+     * "Show more" reaches every published question, however many there are: a cap on the page
+     * number left the ones past it unreadable.
      */
-    public function testTheLinkIsGoneAtTheLastPageThatCanBeShown(): void
+    public function testShowMoreReachesTheLastQuestionWhateverTheirNumber(): void
     {
         (new ModuleConfigProductQuestionSettings())->setQuestionsPerPage(1);
 
-        for ($i = 1; $i <= ProductQuestionBlock::MAXIMUM_PAGE + 1; ++$i) {
+        for ($i = 1; $i <= 52; ++$i) {
             $this->publish('Question number '.$i.'?');
         }
 
-        $block = $this->block('?questions_page='.(ProductQuestionBlock::MAXIMUM_PAGE - 1));
-        self::assertCount(ProductQuestionBlock::MAXIMUM_PAGE - 1, $block->filter('[data-testid^="product-question-item-"]'));
-        self::assertCount(1, $block->filter('[data-testid="product-question-more"]'));
+        $block = $this->block('?questions_page=51');
+        self::assertCount(51, $block->filter('[data-testid^="product-question-item-"]'));
+        self::assertSame('?questions_page=52#product-questions', $block->filter('[data-testid="product-question-more"]')->attr('href'));
 
-        $block = $this->block('?questions_page='.ProductQuestionBlock::MAXIMUM_PAGE);
-        self::assertCount(ProductQuestionBlock::MAXIMUM_PAGE, $block->filter('[data-testid^="product-question-item-"]'));
-        self::assertCount(0, $block->filter('[data-testid="product-question-more"]'), 'The next page would be this one again.');
+        $block = $this->block('?questions_page=52');
+        self::assertCount(52, $block->filter('[data-testid^="product-question-item-"]'));
+        self::assertCount(0, $block->filter('[data-testid="product-question-more"]'), 'Nothing left to show.');
+    }
+
+    /**
+     * A page number past what an integer holds shows every question rather than an error.
+     */
+    public function testAnOversizedPageNumberShowsEveryQuestion(): void
+    {
+        (new ModuleConfigProductQuestionSettings())->setQuestionsPerPage(2);
+
+        for ($i = 1; $i <= 3; ++$i) {
+            $this->publish('Question number '.$i.'?');
+        }
+
+        $block = $this->block('?questions_page=99999999999999999999');
+        self::assertCount(3, $block->filter('[data-testid^="product-question-item-"]'));
+        self::assertCount(0, $block->filter('[data-testid="product-question-more"]'));
     }
 
     /**
