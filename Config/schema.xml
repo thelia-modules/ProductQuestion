@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database defaultIdMethod="native" name="TheliaMain" namespace="ProductQuestion\Model">
+
+    <table name="product_question">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER" />
+        <column name="product_id" required="true" type="INTEGER" />
+        <column name="customer_id" type="INTEGER" />
+        <column name="locale" required="true" size="10" type="VARCHAR" />
+        <column name="content" required="true" type="CLOB" />
+        <column name="status" default="0" required="true" type="TINYINT" />
+        <column name="answer" type="CLOB" />
+        <column name="answered_at" type="TIMESTAMP" />
+        <column name="answered_by" type="INTEGER" />
+
+        <behavior name="timestampable" />
+
+        <!-- A question is about one product and has no meaning without it: deleting the
+             product takes its questions with it, which is what spares this module the
+             deletion listener a polymorphic reference would need. -->
+        <foreign-key foreignTable="product" name="fk_product_question_product_id" onDelete="CASCADE" onUpdate="RESTRICT">
+            <reference foreign="id" local="product_id" />
+        </foreign-key>
+        <!-- A published question and its answer stay on the product page when the customer
+             account goes away. What is lost is who asked, which is the point. -->
+        <foreign-key foreignTable="customer" name="fk_product_question_customer_id" onDelete="SET NULL" onUpdate="RESTRICT">
+            <reference foreign="id" local="customer_id" />
+        </foreign-key>
+        <!-- Same for the administrator who answered: removing their account must not remove
+             the answer the shop published. -->
+        <foreign-key foreignTable="admin" name="fk_product_question_answered_by" onDelete="SET NULL" onUpdate="RESTRICT">
+            <reference foreign="id" local="answered_by" />
+        </foreign-key>
+
+        <!-- The product page: the answered questions of one product in the visitor's
+             language. The only query the front office makes. -->
+        <index name="idx_product_question_product_status_locale">
+            <index-column name="product_id" />
+            <index-column name="status" />
+            <index-column name="locale" />
+        </index>
+        <!-- The moderation list and its status counters filter on the status alone. -->
+        <index name="idx_product_question_status">
+            <index-column name="status" />
+        </index>
+        <index name="idx_product_question_customer_id">
+            <index-column name="customer_id" />
+        </index>
+    </table>
+
+    <external-schema filename="local/config/schema.xml" referenceOnly="true" />
+</database>

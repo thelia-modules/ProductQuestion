@@ -1,0 +1,23 @@
+{#
+ # The one block this module needs on top of the theme's form theme.
+ #
+ # The theme renders every textarea two rows high and offers no way to say otherwise. A
+ # question needs more room, so the block is repeated here with `rows` forwarded from the
+ # field's attributes. Merged onto the theme's list by the component template, so every other
+ # field still renders the theme's way, and scoped to this form: the shop's other textareas
+ # keep the theme's rendering.
+ #}
+{%- block textarea_widget -%}
+    {{ component('Fields:TextArea:Base', {
+        label: label,
+        name: full_name,
+        id: id,
+        rows: attr.rows|default(2),
+        value: value,
+        placeholder: placeholder ?? attr.placeholder ?? null,
+        error: errors|first.message|default(false),
+        disabled: disabled,
+        required: required,
+        help: help ?? null,
+    }) }}
+{%- endblock textarea_widget -%}

@@ -1,0 +1,12 @@
+parameters:
+    level: 6
+    paths:
+        - .
+    excludePaths:
+        analyse:
+            - vendor (?)
+    # Propel builds Model/Base, Model/Map and Model/Event into the install's var/ when the
+    # module is activated. Without them the analyser sees a stub extending nothing and
+    # reports every generated accessor as undefined.
+    scanDirectories:
+        - ../../../var/propel/dev/model

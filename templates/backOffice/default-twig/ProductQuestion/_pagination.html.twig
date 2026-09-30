@@ -1,0 +1,14 @@
+{% set domain = 'productquestion.bo.default-twig' %}
+
+{% if pageCount > 1 %}
+    <nav aria-label="{{ 'Pages'|trans({}, domain) }}" data-testid="product-question-pagination">
+        <ul class="pagination">
+            {% for number in 1..pageCount %}
+                <li class="page-item {{ number == page ? 'active' : '' }}">
+                    <a class="page-link" href="{{ path('productquestion_module_list') }}?{{ filters.withPage(number).toQueryParams|merge({page: number})|url_encode }}">{{ number }}</a>
+                </li>
+            {% endfor %}
+        </ul>
+    </nav>
+    <p class="text-muted">{{ 'Questions in total: %count%'|trans({'%count%': total}, domain) }}</p>
+{% endif %}

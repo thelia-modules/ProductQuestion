@@ -1,0 +1,22 @@
+{% set domain = 'productquestion.bo.default-twig' %}
+{% set base = path('productquestion_module_list') %}
+
+<ul class="nav nav-pills mb-3" data-testid="product-question-status-tabs">
+    <li class="nav-item">
+        <a class="nav-link {{ filters.status is null ? 'active' : '' }}"
+           href="{{ base }}?{{ filters.withoutFilter('status').toQueryParams|url_encode }}">
+            {{ 'All'|trans({}, domain) }}
+            <span class="badge text-bg-light">{{ counts|reduce((carry, n) => carry + n, 0) }}</span>
+        </a>
+    </li>
+    {% for entry in statuses %}
+        <li class="nav-item">
+            <a class="nav-link {{ filters.status == entry.value ? 'active' : '' }}"
+               href="{{ base }}?{{ filters.withStatus(entry.value).toQueryParams|url_encode }}"
+               data-testid="product-question-tab-{{ entry.value }}">
+                {{ entry.label }}
+                <span class="badge text-bg-{{ entry.css }}">{{ counts[entry.value]|default(0) }}</span>
+            </a>
+        </li>
+    {% endfor %}
+</ul>

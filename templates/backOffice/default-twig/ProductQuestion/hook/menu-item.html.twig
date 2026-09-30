@@ -1,0 +1,9 @@
+{# Top-level entry in the side navigation, injected through main.in-top-menu-items. #}
+{% set domain = 'productquestion.bo.default-twig' %}
+{% set is_active = admin_current_location is defined and admin_current_location starts with 'productquestion_module' %}
+<li class="nav-item" data-testid="bo-nav-product-question">
+    <a class="nav-link {{ is_active ? 'active' : '' }}" title="{{ 'Customer questions'|trans({}, domain) }}" href="{{ path('productquestion_module_list') }}" id="top_menu_product_question">
+        <i class="bi bi-chat-left-text me-2" aria-hidden="true"></i>
+        <span class="item-text">{{ 'Customer questions'|trans({}, domain) }}</span>
+    </a>
+</li>
