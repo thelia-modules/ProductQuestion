@@ -18,6 +18,7 @@ use ProductQuestion\Model\ProductQuestionAnswer;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\Repository\ClosedProductRepository;
 use ProductQuestion\Service\ModuleConfigProductQuestionSettings;
+use Propel\Runtime\Connection\ConnectionWrapper;
 use Symfony\Component\DomCrawler\Crawler;
 use Thelia\Core\Template\TemplateHelperInterface;
 use Thelia\Model\Product;
@@ -326,6 +327,7 @@ final class ProductPageBlockTest extends WebIntegrationTestCase
         $this->page();
 
         $connection = $this->getPropelConnection();
+        self::assertInstanceOf(ConnectionWrapper::class, $connection);
         $connection->useDebug(true);
         $before = $connection->getQueryCount();
 
