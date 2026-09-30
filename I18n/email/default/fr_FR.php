@@ -30,4 +30,10 @@ return [
     'The question appears on the product page once you have answered it.' => 'La question apparaît sur la fiche produit une fois que vous y avez répondu.',
     'We have answered your question' => 'Nous avons répondu à votre question',
     'You asked about "%product":' => 'Vous avez demandé, à propos de « %product » :',
+    'A customer answered:' => 'Un client a répondu :',
+    'Stop the emails about this question' => 'Ne plus recevoir de courriel sur cette question',
+    'Stop the emails about this question: %url' => 'Ne plus recevoir de courriel sur cette question : %url',
+    'Tell the customer another customer answered their question' => 'Prévenir le client qu’un autre client a répondu à sa question',
+    'A customer answered your question about "%product"' => 'Un client a répondu à votre question sur « %product »',
+    'Your question has a new answer' => 'Votre question a une nouvelle réponse',
 ];

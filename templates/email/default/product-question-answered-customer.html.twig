@@ -21,4 +21,8 @@
     <p><a href="{{ question.productUrl }}">{{ labels.link }}</a></p>
 
     <p>{{ labels.outro }}</p>
+
+    {% if question.unsubscribeUrl %}
+        <p style="font-size: 12px;"><a href="{{ question.unsubscribeUrl }}">{{ labels.unsubscribe }}</a></p>
+    {% endif %}
 {% endblock %}

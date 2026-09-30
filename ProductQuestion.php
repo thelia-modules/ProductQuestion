@@ -76,6 +76,12 @@ final class ProductQuestion extends BaseModule
     public const MESSAGE_CUSTOMER_ANSWERED = 'product_question_answered_customer';
 
     /**
+     * The message sent to the customer when another customer's answer to their question is
+     * published. Same templates, its own subject.
+     */
+    public const MESSAGE_CUSTOMER_ANSWERED_BY_CUSTOMER = 'product_question_answered_by_customer';
+
+    /**
      * Where the moderation list lives: the URL the module list's Configure button points at.
      *
      * The controller redirects to it after a write, as a plain URL rather than a route name,
@@ -119,7 +125,7 @@ final class ProductQuestion extends BaseModule
 
         // message_i18n and message_version follow by cascade.
         MessageQuery::create()
-            ->filterByName([self::MESSAGE_ADMIN_NOTIFICATION, self::MESSAGE_CUSTOMER_ANSWERED], Criteria::IN)
+            ->filterByName([self::MESSAGE_ADMIN_NOTIFICATION, self::MESSAGE_CUSTOMER_ANSWERED, self::MESSAGE_CUSTOMER_ANSWERED_BY_CUSTOMER], Criteria::IN)
             ->delete($con);
     }
 

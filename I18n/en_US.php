@@ -39,4 +39,11 @@ return [
     'Your vote could not be counted.' => 'Your vote could not be counted.',
     'Thank you, your vote has been counted.' => 'Thank you, your vote has been counted.',
     'Your vote was already counted.' => 'Your vote was already counted.',
+    'Answers to your question' => 'Answers to your question',
+    'Stop receiving an email each time your question gets an answer?' => 'Stop receiving an email each time your question gets an answer?',
+    'Stop the emails' => 'Stop the emails',
+    'Done: you will not receive any more emails about this question.' => 'Done: you will not receive any more emails about this question.',
+    'This link has expired. Use the link of a more recent email.' => 'This link has expired. Use the link of a more recent email.',
+    'This link is not valid.' => 'This link is not valid.',
+    'Back to the shop' => 'Back to the shop',
 ];

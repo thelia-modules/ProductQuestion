@@ -21,6 +21,7 @@ use ProductQuestion\Model\ProductQuestionAnswer;
 use ProductQuestion\Model\ProductQuestionStatus;
 use ProductQuestion\ProductQuestion as ProductQuestionModule;
 use ProductQuestion\Service\Notification\ProductQuestionAnswerNotification;
+use ProductQuestion\Service\Notification\ProductQuestionUnsubscribeLink;
 use ProductQuestion\Tests\Double\FixedShopContext;
 use ProductQuestion\Tests\Double\FixedTranslator;
 use ProductQuestion\Tests\Double\InMemoryProductTitles;
@@ -69,6 +70,7 @@ final class ProductQuestionCustomerNotifierTest extends TestCase
             new InMemoryProductTitles(['fr_FR' => [12 => 'Horatio'], 'en_US' => [12 => 'Horatio EN']]),
             new FixedShopContext('en_US'),
             $logger ?? new SpyLogger(),
+            new ProductQuestionUnsubscribeLink('test-secret', new FixedShopContext('en_US')),
         );
     }
 
@@ -87,6 +89,40 @@ final class ProductQuestionCustomerNotifierTest extends TestCase
         self::assertSame('Horatio', $sent['parameters']['question']['productTitle']);
         self::assertSame('https://shop.test/fr_FR/product-12.html', $sent['parameters']['question']['productUrl']);
         self::assertSame('Oui, compatible.', $sent['parameters']['question']['answer']);
+        // Signed and dated, pointing at this question.
+        self::assertMatchesRegularExpression('#^https://shop\.test/product-question/5/unsubscribe\?expires=\d+&signature=[0-9a-f]{64}$#', $sent['parameters']['question']['unsubscribeUrl']);
+    }
+
+    /**
+     * Another customer's answer goes out under its own message, so its subject does not speak
+     * for the shop.
+     */
+    public function testACustomerAnswerIsAnnouncedWithItsOwnMessage(): void
+    {
+        $mailer = new SpyCustomerMailer();
+
+        $this->notifier($mailer)->onQuestionAnswered($this->answered($this->question(), true, false, 56));
+
+        self::assertSame(ProductQuestionModule::MESSAGE_CUSTOMER_ANSWERED_BY_CUSTOMER, $mailer->sent[0]['code'] ?? null);
+    }
+
+    public function testAnAuthorWhoUnsubscribedIsNotWrittenTo(): void
+    {
+        $mailer = new SpyCustomerMailer();
+        $question = $this->question()->setNotifyAuthor(false);
+
+        $this->notifier($mailer)->onQuestionAnswered($this->answered($question, true));
+
+        self::assertSame([], $mailer->sent);
+    }
+
+    public function testAnAuthorAnsweringTheirOwnQuestionIsNotToldAboutIt(): void
+    {
+        $mailer = new SpyCustomerMailer();
+
+        $this->notifier($mailer)->onQuestionAnswered($this->answered($this->question(42), true, false, 42));
+
+        self::assertSame([], $mailer->sent);
     }
 
     /**

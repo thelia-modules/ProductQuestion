@@ -47,6 +47,11 @@ final class ProductQuestionMessageInstaller
             'Tell the customer their question has been answered',
             'Our answer to your question about "%product"',
         ],
+        ProductQuestionModule::MESSAGE_CUSTOMER_ANSWERED_BY_CUSTOMER => [
+            'product-question-answered-customer',
+            'Tell the customer another customer answered their question',
+            'A customer answered your question about "%product"',
+        ],
     ];
 
     public function install(): void

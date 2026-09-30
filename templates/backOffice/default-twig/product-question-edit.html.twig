@@ -112,6 +112,10 @@
                                 {{ 'Deleted account'|trans({}, domain) }}
                             {% endif %}
                         </li>
+                        <li class="list-group-item" data-testid="product-question-notify-author">
+                            <span class="text-muted d-block">{{ 'Emails to the author about new answers'|trans({}, domain) }}</span>
+                            {{ question.notifyAuthor ? 'On'|trans({}, domain) : 'Stopped by the author'|trans({}, domain) }}
+                        </li>
                         <li class="list-group-item">
                             <span class="text-muted d-block">{{ 'Product'|trans({}, domain) }}</span>
                             <a href="{{ productUrl }}" data-testid="product-question-product-link">{{ productTitle ?? ('Product #%id%'|trans({'%id%': question.productId}, domain)) }}</a>

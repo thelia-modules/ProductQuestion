@@ -39,4 +39,11 @@ return [
     'Your vote could not be counted.' => 'Votre vote n’a pas pu être pris en compte.',
     'Thank you, your vote has been counted.' => 'Merci, votre vote a été pris en compte.',
     'Your vote was already counted.' => 'Votre vote avait déjà été pris en compte.',
+    'Answers to your question' => 'Réponses à votre question',
+    'Stop receiving an email each time your question gets an answer?' => 'Ne plus recevoir de courriel à chaque nouvelle réponse à votre question ?',
+    'Stop the emails' => 'Arrêter les courriels',
+    'Done: you will not receive any more emails about this question.' => 'C’est fait : vous ne recevrez plus de courriel au sujet de cette question.',
+    'This link has expired. Use the link of a more recent email.' => 'Ce lien a expiré. Utilisez le lien d’un courriel plus récent.',
+    'This link is not valid.' => 'Ce lien n’est pas valide.',
+    'Back to the shop' => 'Retour à la boutique',
 ];

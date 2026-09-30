@@ -30,4 +30,12 @@ interface ShopContextInterface
 
     /** The core's product record. */
     public function productAdminUrl(int $productId): string;
+
+    /**
+     * The absolute URL of a front-office path, from the shop's configured address when there is
+     * no request (a mail sent from the command line).
+     *
+     * @param array<string, int|string> $parameters
+     */
+    public function publicUrl(string $path, array $parameters = []): string;
 }

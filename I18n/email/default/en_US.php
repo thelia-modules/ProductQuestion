@@ -30,4 +30,10 @@ return [
     'The question appears on the product page once you have answered it.' => 'The question appears on the product page once you have answered it.',
     'We have answered your question' => 'We have answered your question',
     'You asked about "%product":' => 'You asked about "%product":',
+    'A customer answered:' => 'A customer answered:',
+    'Stop the emails about this question' => 'Stop the emails about this question',
+    'Stop the emails about this question: %url' => 'Stop the emails about this question: %url',
+    'Tell the customer another customer answered their question' => 'Tell the customer another customer answered their question',
+    'A customer answered your question about "%product"' => 'A customer answered your question about "%product"',
+    'Your question has a new answer' => 'Your question has a new answer',
 ];

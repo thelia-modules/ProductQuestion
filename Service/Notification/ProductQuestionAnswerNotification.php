@@ -17,8 +17,8 @@ use ProductQuestion\ProductQuestion as ProductQuestionModule;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
- * What the customer is told once the shop has answered: their question, the answer, and the
- * product page it now sits on. In the language they asked in — the answer is written in it.
+ * What the customer is told once an answer is published: their question, the answer, the
+ * product page it now sits on, and the link to stop these mails. In the language they asked in — the answer is written in it.
  */
 final readonly class ProductQuestionAnswerNotification
 {
@@ -29,7 +29,7 @@ final readonly class ProductQuestionAnswerNotification
 
     /**
      * @return array{
-     *     question: array{id: int, content: string, answer: string, productTitle: string, productUrl: string},
+     *     question: array{id: int, content: string, answer: string, productTitle: string, productUrl: string, unsubscribeUrl: string},
      *     labels: array<string, string>
      * }
      */
@@ -40,6 +40,8 @@ final readonly class ProductQuestionAnswerNotification
         ?string $productTitle,
         string $productUrl,
         string $locale,
+        bool $official = true,
+        string $unsubscribeUrl = '',
     ): array {
         $productTitle ??= $this->trans('the product', [], $locale);
 
@@ -50,15 +52,22 @@ final readonly class ProductQuestionAnswerNotification
                 'answer' => $answer,
                 'productTitle' => $productTitle,
                 'productUrl' => $productUrl,
+                'unsubscribeUrl' => $unsubscribeUrl,
             ],
             'labels' => [
-                'subject' => $this->trans('Our answer to your question about "%product"', ['%product' => $productTitle], $locale),
-                'heading' => $this->trans('We have answered your question', [], $locale),
+                'subject' => $official
+                    ? $this->trans('Our answer to your question about "%product"', ['%product' => $productTitle], $locale)
+                    : $this->trans('A customer answered your question about "%product"', ['%product' => $productTitle], $locale),
+                'heading' => $official
+                    ? $this->trans('We have answered your question', [], $locale)
+                    : $this->trans('Your question has a new answer', [], $locale),
                 'intro' => $this->trans('You asked about "%product":', ['%product' => $productTitle], $locale),
-                'answer' => $this->trans('Our answer:', [], $locale),
+                'answer' => $official ? $this->trans('Our answer:', [], $locale) : $this->trans('A customer answered:', [], $locale),
                 'link' => $this->trans('See it on the product page', [], $locale),
                 'linkWithUrl' => $this->trans('See it on the product page: %url', ['%url' => $productUrl], $locale),
                 'outro' => $this->trans('Thank you for your interest.', [], $locale),
+                'unsubscribe' => $this->trans('Stop the emails about this question', [], $locale),
+                'unsubscribeWithUrl' => $this->trans('Stop the emails about this question: %url', ['%url' => $unsubscribeUrl], $locale),
             ],
         ];
     }

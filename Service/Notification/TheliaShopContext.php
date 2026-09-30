@@ -44,4 +44,9 @@ final readonly class TheliaShopContext implements ShopContextInterface
     {
         return URL::getInstance()->absoluteUrl('/admin/products/update', ['product_id' => $productId]);
     }
+
+    public function publicUrl(string $path, array $parameters = []): string
+    {
+        return URL::getInstance()->absoluteUrl($path, $parameters);
+    }
 }
